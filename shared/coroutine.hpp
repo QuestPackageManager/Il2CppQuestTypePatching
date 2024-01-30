@@ -190,7 +190,7 @@ namespace custom_types::Helpers {
     }
 }
 
-DECLARE_CLASS_INTERFACES_EXPORT(custom_types::Helpers, ResetableCoroutine, "System", "Object", sizeof(Il2CppObject),
+DECLARE_CLASS_INTERFACES(custom_types::Helpers, ResetableCoroutine, "System", "Object", sizeof(Il2CppObject),
         (il2cpp_utils::GetClassFromName("System.Collections", "IEnumerator")),
     private:
     custom_types::Helpers::CoroFuncType coroCreator;
@@ -206,7 +206,7 @@ DECLARE_CLASS_INTERFACES_EXPORT(custom_types::Helpers, ResetableCoroutine, "Syst
     DECLARE_DTOR(Finalize);
 )
 
-DECLARE_CLASS_INTERFACES_EXPORT(custom_types::Helpers, StandardCoroutine, "System", "Object", sizeof(Il2CppObject),
+DECLARE_CLASS_INTERFACES(custom_types::Helpers, StandardCoroutine, "System", "Object", sizeof(Il2CppObject),
         (il2cpp_utils::GetClassFromName("System.Collections", "IEnumerator")),
     struct CoroutineNotResettable : std::runtime_error {
         CoroutineNotResettable() : std::runtime_error("StandardCoroutine is not resettable!") {}
