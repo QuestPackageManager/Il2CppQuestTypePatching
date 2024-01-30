@@ -7,7 +7,7 @@
 
 namespace custom_types {
 
-int get_delegate_count();
+CUSTOM_TYPES_EXPORT int get_delegate_count();
 
 inline void setup_for_delegate([[maybe_unused]] MethodInfo* info) {
     // The method in question actually isn't quite fit for being a proper delegate
