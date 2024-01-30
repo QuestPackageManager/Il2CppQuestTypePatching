@@ -56,13 +56,13 @@
 #endif
 
 // Helper macro for declaring classes with and without interfaces
-#define ___DECLARE_TYPE_WRAPPER(namespaze_, name_, typeEnum_, baseNamespaze, baseName, baseSize, dllName_, interfaces_, flags_, ...) \
+#define ___DECLARE_TYPE_WRAPPER(visibility_, namespaze_, name_, typeEnum_, baseNamespaze, baseName, baseSize, dllName_, interfaces_, flags_, ...) \
 namespace namespaze_ { \
     class name_; \
 } \
 MARK_REF_PTR_T(namespaze_::name_);\
 namespace namespaze_ { \
-    class name_ { \
+    class visibility_ name_ { \
         using ___TargetType = name_; \
         constexpr static auto ___Base__Size = baseSize; \
         friend ::custom_types::Register; \
@@ -176,13 +176,13 @@ struct ::il2cpp_utils::il2cpp_type_check::need_box<::namespaze_::name_> { \
 };
 
 // Helper for declaring classes with and without interfaces with explicit inheritance
-#define ___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze_, name_, typeEnum_, baseT, dllName_, interfaces_, flags_, baseCustom, ...) \
+#define ___DECLARE_TYPE_WRAPPER_INHERITANCE(visibility_, namespaze_, name_, typeEnum_, baseT, dllName_, interfaces_, flags_, baseCustom, ...) \
 namespace namespaze_ { \
     class name_; \
 } \
 MARK_REF_PTR_T(namespaze_::name_);\
 namespace namespaze_ { \
-    class name_ : public baseT { \
+    class visibility_ name_ : public baseT { \
         using ___TargetType = name_; \
         constexpr static auto ___Base__Size = sizeof(baseT); \
         friend ::custom_types::Register; \
@@ -296,47 +296,73 @@ struct ::il2cpp_utils::il2cpp_type_check::need_box<::namespaze_::name_> { \
     constexpr static bool value = false; \
 };
 
+#ifndef CUSTOM_TYPES_HIDDEN_VISIBILITY
+#define CUSTOM_TYPES_HIDDEN_VISIBILITY __attribute__((visibility("hidden")))
+#endif
+
+#ifndef CUSTOM_TYPES_EXPORT_VISIBILITY
+#define CUSTOM_TYPES_EXPORT_VISIBILITY __attribute__((visibility("default")))
+#endif
+
 // Declares a class with the given namespace, name, base namespace, base name, and baseSize.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this holds DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS(namespaze, name, baseNamespaze, baseName, baseSize, ...) \
-___DECLARE_TYPE_WRAPPER(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, #namespaze, {}, 0, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, #namespaze, {}, 0, __VA_ARGS__)
+
+#define DECLARE_CLASS_EXPORT(namespaze, name, baseNamespaze, baseName, baseSize, ...) \
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, #namespaze, {}, 0, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, base namespace, base name, baseSize, and dll name.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this holds DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_DLL(namespaze, name, baseNamespaze, baseName, baseSize, dllName_, ...) \
-___DECLARE_TYPE_WRAPPER(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, dllName_, {}, 0, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, dllName_, {}, 0, __VA_ARGS__)
+
+#define DECLARE_CLASS_DLL_EXPORT(namespaze, name, baseNamespaze, baseName, baseSize, dllName_, ...) \
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, dllName_, {}, 0, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, base namespace, base name, baseSize, and interface list.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this holds DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_INTERFACES(namespaze, name, baseNamespaze, baseName, baseSize, interfaces, ...) \
-___DECLARE_TYPE_WRAPPER(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, #namespaze, {interfaces}, 0, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, #namespaze, {interfaces}, 0, __VA_ARGS__)
+
+#define DECLARE_CLASS_INTERFACES_EXPORT(namespaze, name, baseNamespaze, baseName, baseSize, interfaces, ...) \
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, #namespaze, {interfaces}, 0, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, base namespace, base name, baseSize, dll name, and interface list.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this holds DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_INTERFACES_DLL(namespaze, name, baseNamespaze, baseName, baseSize, dllName_, interfaces, ...) \
-___DECLARE_TYPE_WRAPPER(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, dllName_, {interfaces}, 0, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, dllName_, {interfaces}, 0, __VA_ARGS__)
+
+#define DECLARE_CLASS_INTERFACES_DLL_EXPORT(namespaze, name, baseNamespaze, baseName, baseSize, dllName_, interfaces, ...) \
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseNamespaze, baseName, baseSize, dllName_, {interfaces}, 0, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, and base type.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this hold other DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_CODEGEN(namespaze, name, baseT, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, #namespaze, {}, 0, nullptr, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, #namespaze, {}, 0, nullptr, __VA_ARGS__)
+
+#define DECLARE_CLASS_CODEGEN_EXPORT(visibility, namespaze, name, baseT, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, #namespaze, {}, 0, nullptr, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, base type, and dllName.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this hold other DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_CODEGEN_DLL(namespaze, name, baseT, dllName_, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, dllName_, {}, 0, nullptr, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, dllName_, {}, 0, nullptr, __VA_ARGS__)
+
+#define DECLARE_CLASS_CODEGEN_DLL_EXPORT(visibility, namespaze, name, baseT, dllName_, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, dllName_, {}, 0, nullptr, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, base type, and interface types.
 // Assumes the class being declared is non-abstract.
@@ -345,7 +371,10 @@ ___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE
 // TODO: Note that this type does NOT properly inherit its interfaces or provide conversion operators.
 // Casts WILL be necessary.
 #define DECLARE_CLASS_CODEGEN_INTERFACES(namespaze, name, baseT, interfaceTs, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, #namespaze, {interfaceTs}, 0, nullptr, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, #namespaze, {interfaceTs}, 0, nullptr, __VA_ARGS__)
+
+#define DECLARE_CLASS_CODEGEN_INTERFACES_EXPORT(namespaze, name, baseT, interfaceTs, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, #namespaze, {interfaceTs}, 0, nullptr, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, base type, dll name, and interface types.
 // Assumes the class being declared is non-abstract.
@@ -354,49 +383,70 @@ ___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE
 // TODO: Note that this type does NOT properly inherit its interfaces or provide conversion operators.
 // Casts WILL be necessary.
 #define DECLARE_CLASS_CODEGEN_INTERFACES_DLL(namespaze, name, baseT, interfaceTs, dllName_, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, dllName_, interfaceTs, 0, nullptr, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, dllName_, interfaceTs, 0, nullptr, __VA_ARGS__)
+
+#define DECLARE_CLASS_CODEGEN_INTERFACES_DLL_EXPORT(namespaze, name, baseT, interfaceTs, dllName_, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseT, dllName_, interfaceTs, 0, nullptr, __VA_ARGS__)
 
 // Declares a class with the given namespace, name, and base type (WHICH MUST BE A DECLARE TYPE OF ITS OWN!)
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this hold other DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_CUSTOM(namespaze, name, baseCustomT, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, #namespaze, {}, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, #namespaze, {}, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+
+#define DECLARE_CLASS_CUSTOM_EXPORT(namespaze, name, baseCustomT, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, #namespaze, {}, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
 
 // Declares a class with the given namespace, name, base type (WHICH MUST BE A DECLARE TYPE OF ITS OWN!), and dll name.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this hold other DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_CUSTOM_DLL(namespaze, name, baseCustomT, dllName_, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, dllName_, {}, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, dllName_, {}, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+
+#define DECLARE_CLASS_CUSTOM_DLL_EXPORT(namespaze, name, baseCustomT, dllName_, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, dllName_, {}, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
 
 // Declares a class with the given namespace, name, and base type (WHICH MUST BE A DECLARE TYPE OF ITS OWN!), and interface list.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this hold other DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_CUSTOM_INTERFACES(namespaze, name, baseCustomT, interfaceTs, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, #namespaze, interfaceTs, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, #namespaze, interfaceTs, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+
+#define DECLARE_CLASS_CUSTOM_INTERFACES_EXPORT(namespaze, name, baseCustomT, interfaceTs, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, #namespaze, interfaceTs, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
 
 // Declares a class with the given namespace, name, and base type (WHICH MUST BE A DECLARE TYPE OF ITS OWN!), dll name, and interface list.
 // Assumes the class being declared is non-abstract.
 // impl specifies the implementation of the class, the actual definition of the type.
 // It is recommended this hold other DECLARE statements, as defined in macros.hpp
 #define DECLARE_CLASS_CUSTOM_INTERFACES_DLL(namespaze, name, baseCustomT, dllName_, interfaceTs, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, dllName_, interfaceTs, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, dllName_, interfaceTs, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
+
+#define DECLARE_CLASS_CUSTOM_INTERFACES_DLL_EXPORT(namespaze, name, baseCustomT, dllName_, interfaceTs, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_CLASS, baseCustomT, dllName_, interfaceTs, 0, baseCustomT::___TypeRegistration::get(), __VA_ARGS__)
 
 // Declares a value type with the given namespace, name, base namespace, base name, and baseSize.
 // Assumes the struct being declared is non-generic/abstract.
 // impl specifies the implementation of the class, which is the actual definition of the type.
 // It is recommended that this holds DECLARE statements as defined in macros.hpp, but fields can ultimately be of any type.
 #define DECLARE_VALUE(namespaze, name, baseNamespaze, baseName, baseSize, ...) \
-___DECLARE_TYPE_WRAPPER(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_VALUETYPE, baseNamespaze, baseName, baseSize, #namespaze, {}, 0, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_VALUETYPE, baseNamespaze, baseName, baseSize, #namespaze, {}, 0, __VA_ARGS__)
+
+#define DECLARE_VALUE_EXPORT(namespaze, name, baseNamespaze, baseName, baseSize, ...) \
+___DECLARE_TYPE_WRAPPER(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_VALUETYPE, baseNamespaze, baseName, baseSize, #namespaze, {}, 0, __VA_ARGS__)
 
 // Declares a value type with the given namespace, name, and base type.
 // Assumes the struct being declared is non-abstract.
 // impl specifies the implementation of the struct, the actual definition of the type.
 // It is recommended that this holds DECLARE statements as defined in macros.hpp, but fields can ultimately be of any type.
 #define DECLARE_VALUE_CODEGEN(namespaze, name, baseT, ...) \
-___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_VALUETYPE, baseT, #namespaze, {}, 0, nullptr, __VA_ARGS__)
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_HIDDEN_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_VALUETYPE, baseT, #namespaze, {}, 0, nullptr, __VA_ARGS__)
+
+#define DECLARE_VALUE_CODEGEN_EXPORT(namespaze, name, baseT, ...) \
+___DECLARE_TYPE_WRAPPER_INHERITANCE(CUSTOM_TYPES_EXPORT_VISIBILITY, namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE_VALUETYPE, baseT, #namespaze, {}, 0, nullptr, __VA_ARGS__)
 
 #ifdef DEFINE_TYPE
 #error "DEFINE_TYPE is already defined! Undefine it before including macros.hpp!"

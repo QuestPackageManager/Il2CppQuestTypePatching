@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./_config.h"
 #include "macros.hpp"
 #include <functional>
 #include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
@@ -467,7 +468,7 @@ void DelegateWrapperInstance<RI, TI, TArgsI...>::dtor() {
     this->~DelegateWrapperInstance();
 }
 
-void log_delegate(Il2CppDelegate* d);
+CUSTOM_TYPES_EXPORT void log_delegate(Il2CppDelegate* d);
 
 template<class T = MulticastDelegate*, class R, class... TArgs>
 T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs...>* inst) {
