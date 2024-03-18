@@ -22,8 +22,6 @@ struct std::hash<std::pair<std::string, std::string>> {
 namespace custom_types {
 /// @class Public API for registering types
 class Register {
-    friend TypeRegistration;
-
    private:
     CUSTOM_TYPES_EXPORT static std::unordered_map<std::string, Il2CppAssembly*> assembs;
     CUSTOM_TYPES_EXPORT static std::unordered_map<std::string, Il2CppImage*> images;
@@ -33,8 +31,8 @@ class Register {
     CUSTOM_TYPES_EXPORT static std::mutex classMappingMtx;
     CUSTOM_TYPES_EXPORT static bool installed;
 
-    CUSTOM_TYPES_EXPORT static std::vector<TypeRegistration*> toRegister;
-    CUSTOM_TYPES_EXPORT static std::vector<TypeRegistration*> registeredTypes;
+    CUSTOM_TYPES_EXPORT static std::vector<custom_types::CustomTypeInfo> toRegister;
+    CUSTOM_TYPES_EXPORT static std::vector<custom_types::CustomTypeInfo> registeredTypes;
     CUSTOM_TYPES_EXPORT static TypeDefinitionIndex typeIdx;
 
     CUSTOM_TYPES_EXPORT static Il2CppAssembly* createAssembly(std::string_view name, Il2CppImage* img);
