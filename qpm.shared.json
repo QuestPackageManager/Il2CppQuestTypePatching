@@ -6,7 +6,7 @@
     "info": {
       "name": "custom-types",
       "id": "custom-types",
-      "version": "0.16.0",
+      "version": "0.18.0",
       "url": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching",
       "additionalData": {
         "overrideSoName": "libcustom-types.so",
@@ -27,6 +27,9 @@
           "pwsh ./build.ps1 -clean",
           "qpm qmod manifest",
           "pwsh ./createqmod.ps1 CustomTypes -clean"
+        ],
+        "test": [
+          "pwsh ./build.ps1 -local_test"
         ]
       },
       "qmodIncludeDirs": [

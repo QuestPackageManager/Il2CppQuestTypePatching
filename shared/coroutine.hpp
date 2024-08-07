@@ -206,8 +206,7 @@ namespace custom_types::Helpers {
     }
 }
 
-DECLARE_CLASS_INTERFACES(custom_types::Helpers, ResetableCoroutine, "System", "Object", sizeof(Il2CppObject),
-        (il2cpp_utils::GetClassFromName("System.Collections", "IEnumerator")),
+DECLARE_CLASS_INTERFACES(custom_types::Helpers, ResetableCoroutine, "System", "Object", sizeof(Il2CppObject), INTERFACE_NAME("System.Collections", "IEnumerator")) {
     private:
     custom_types::Helpers::CoroFuncType coroCreator;
     custom_types::Helpers::Wrapper current;
@@ -220,10 +219,9 @@ DECLARE_CLASS_INTERFACES(custom_types::Helpers, ResetableCoroutine, "System", "O
     DECLARE_OVERRIDE_METHOD(Il2CppObject*, get_Current, il2cpp_utils::FindMethod("System.Collections", "IEnumerator", "get_Current"));
     DECLARE_OVERRIDE_METHOD(void, Reset, il2cpp_utils::FindMethod("System.Collections", "IEnumerator", "Reset"));
     DECLARE_DTOR(Finalize);
-)
+};
 
-DECLARE_CLASS_INTERFACES(custom_types::Helpers, StandardCoroutine, "System", "Object", sizeof(Il2CppObject),
-        (il2cpp_utils::GetClassFromName("System.Collections", "IEnumerator")),
+DECLARE_CLASS_INTERFACES(custom_types::Helpers, StandardCoroutine, "System", "Object", sizeof(Il2CppObject), INTERFACE_NAME("System.Collections", "IEnumerator")) {
     struct CoroutineNotResettable : std::runtime_error {
         CoroutineNotResettable() : std::runtime_error("StandardCoroutine is not resettable!") {}
     };
@@ -238,7 +236,7 @@ DECLARE_CLASS_INTERFACES(custom_types::Helpers, StandardCoroutine, "System", "Ob
     DECLARE_OVERRIDE_METHOD(Il2CppObject*, get_Current, il2cpp_utils::FindMethod("System.Collections", "IEnumerator", "get_Current"));
     DECLARE_OVERRIDE_METHOD(void, Reset, il2cpp_utils::FindMethod("System.Collections", "IEnumerator", "Reset"));
     DECLARE_DTOR(Finalize);
-)
+};
 
 namespace custom_types::Helpers {
     /// @brief Represents an allocation failure when creating a new coroutine.

@@ -28,7 +28,9 @@ add_compile_definitions(NEED_UNSAFE_CSHARP)
 add_compile_definitions(UNITY_2021)
 add_compile_definitions(NO_VERBOSE_LOGS)
 # For performing debug logging of very hard to diagnose issues
-add_compile_definitions(CT_USE_GCDESCRIPTOR_DEBUG)
+if (NOT DEFINED LOCAL_TEST)
+    add_compile_definitions(CT_USE_GCDESCRIPTOR_DEBUG)
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
