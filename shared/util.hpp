@@ -3,6 +3,7 @@
 #include "beatsaber-hook/shared/utils/type-concepts.hpp"
 #include "beatsaber-hook/shared/utils/il2cpp-functions.hpp"
 #include "beatsaber-hook/shared/utils/il2cpp-utils-exceptions.hpp"
+#include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
 
 namespace custom_types {
     template<class F>
@@ -29,9 +30,38 @@ namespace custom_types {
         }
     };
 
+    template<size_t N>
+    struct string_literal {
+        constexpr string_literal(const char (&str)[N]) {
+            std::copy_n(str, N, value);
+        }
+        char value[N];
+    };
+
+    template<string_literal namespaze_, string_literal name_>
+    struct interface_helper {
+        static auto constexpr namespaze = namespaze_;
+        static auto constexpr name = name_;
+    };
+
     struct CUSTOM_TYPES_EXPORT NullAccessException : il2cpp_utils::exceptions::StackTraceException {
         NullAccessException() : il2cpp_utils::exceptions::StackTraceException("Null instance access on a custom type field!") {}
     };
+
+    template<typename T>
+    Il2CppClass* ExtractClass() {
+        return ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_class<T>::get();
+    }
+    template<typename T>
+    requires requires () { ::il2cpp_utils::GetClassFromName(T::namespaze.value, T::name.value); }
+    Il2CppClass* ExtractClass() {
+        return ::il2cpp_utils::GetClassFromName(T::namespaze.value, T::name.value);
+    }
+
+    template<typename... Ts>
+    std::vector<Il2CppClass*> ExtractClasses() {
+        return {ExtractClass<Ts>()...};
+    }
 
 #if __has_feature(cxx_exceptions)
     #define CT_FIELD_ACCESS_CHECK(inst) if (!static_cast<const void*>(inst)) throw ::custom_types::NullAccessException()
