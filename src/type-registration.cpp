@@ -295,7 +295,6 @@ namespace custom_types {
 		// otherwise: sizeof(Il2CppObject*)
 		// The actual size of the type seems to be a bit more annoying to compute...
 		k->minimumAlignment = 8;
-		k->naturalAligment = 8;
 		// TODO: Eventually allow creation of thread static fields?
 		k->thread_static_fields_offset = -1;
 		k->thread_static_fields_size = 0;

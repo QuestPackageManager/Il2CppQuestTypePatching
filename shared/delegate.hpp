@@ -12,7 +12,9 @@ CUSTOM_TYPES_EXPORT int get_delegate_count();
 inline void setup_for_delegate([[maybe_unused]] MethodInfo* info) {
     // The method in question actually isn't quite fit for being a proper delegate
     // So, here we will set it just to make sure it does what we want.
-    info->indirect_call_via_invokers = true;
+    
+    // Field no longer exists, delegates are no longer invoked properly
+    // info->indirect_call_via_invokers = true;
     // TODO: Support virtual invokes some time in the distant, distant future.
     // m->slot = kInvalidIl2CppMethodSlot;
     // m->invoker_method = parent_invoke->invoker_method;

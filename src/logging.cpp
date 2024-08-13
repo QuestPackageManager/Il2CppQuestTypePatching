@@ -253,7 +253,6 @@ void logAll(const Il2CppClass* klass) {
     custom_types::logger.debug("genericRecursionDepth: {}", klass->genericRecursionDepth);
     custom_types::logger.debug("rank: {}", klass->rank);
     custom_types::logger.debug("minimumAlignment: {}", klass->minimumAlignment);
-    custom_types::logger.debug("naturalAligment: {}", klass->naturalAligment);
     custom_types::logger.debug("packingSize: {}", klass->packingSize);
     custom_types::logger.debug("initialized_and_no_error: {}", klass->initialized_and_no_error);
     custom_types::logger.debug("nullabletype: {}", klass->nullabletype);
