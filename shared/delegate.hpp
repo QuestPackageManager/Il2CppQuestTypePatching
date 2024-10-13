@@ -9,17 +9,6 @@ namespace custom_types {
 
 CUSTOM_TYPES_EXPORT int get_delegate_count();
 
-inline void setup_for_delegate([[maybe_unused]] MethodInfo* info) {
-    // The method in question actually isn't quite fit for being a proper delegate
-    // So, here we will set it just to make sure it does what we want.
-    
-    // Field no longer exists, delegates are no longer invoked properly
-    // info->indirect_call_via_invokers = true;
-    // TODO: Support virtual invokes some time in the distant, distant future.
-    // m->slot = kInvalidIl2CppMethodSlot;
-    // m->invoker_method = parent_invoke->invoker_method;
-}
-
 /// @brief The wrapper for an invokable delegate without an existing context.
 /// DO NOT ATTEMPT TO CREATE THIS YOURSELF!
 /// @tparam R The return type of the function being called.
@@ -483,11 +472,9 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs.
     // We need to ensure static initialization of both the dtor method registrator
     // and the invoke method registrator:
     custom_types::logger.debug("Delegate dtor registrator: {}", fmt::ptr(DelegateWrapperStatic<R, TArgs...>::___dtor_MethodRegistrator.get()));
-    auto* invokeMethod = CRASH_UNLESS(il2cpp_functions::class_get_method_from_name(delegateClass, "Invoke", -1));
     auto* method = DelegateWrapperStatic<R, TArgs...>::___Invoke_MethodRegistrator.get();
-    setup_for_delegate(method);
 
-    auto* delegate = reinterpret_cast<T>(il2cpp_functions::object_new(delegateClass));
+    auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
     // find the ctor method that takes object, intptr
     auto ctor_minfo = THROW_UNLESS(
         il2cpp_utils::FindMethod(
@@ -502,19 +489,21 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs.
     );
     CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, inst, (void*)&method));
 
+    delegate->method_ptr = (void(*)())DelegateWrapperStatic<R, TArgs...>::Invoke;
+    delegate->invoke_impl = (void(*)())DelegateWrapperStatic<R, TArgs...>::Invoke;
+    delegate->invoke_impl_this = (Il2CppObject*)inst;
+
     custom_types::logger.debug("Created delegate: {} ({}), for instance: {} with MethodInfo*: {}", fmt::ptr(delegate), fmt::ptr(delegateClass), fmt::ptr(inst), fmt::ptr(method));
-    log_delegate(reinterpret_cast<Il2CppDelegate*>(delegate));
-    return delegate;
+    log_delegate(delegate);
+    return reinterpret_cast<T>(delegate);
 }
 
 template<class T = MulticastDelegate*, class R, class I, class... TArgs>
 T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, TArgs...>* inst) {
     custom_types::logger.debug("Delegate instance dtor registrator: {}", fmt::ptr(DelegateWrapperInstance<R, I, TArgs...>::___dtor_MethodRegistrator.get()));
-    auto* invokeMethod = CRASH_UNLESS(il2cpp_functions::class_get_method_from_name(delegateClass, "Invoke", -1));
     auto* method = DelegateWrapperInstance<R, I, TArgs...>::___Invoke_MethodRegistrator.get();
-    setup_for_delegate(method);
 
-    auto* delegate = reinterpret_cast<T>(il2cpp_functions::object_new(delegateClass));
+    auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
     // find the ctor method that takes object, intptr
     auto ctor_minfo = THROW_UNLESS(
         il2cpp_utils::FindMethod(
@@ -529,9 +518,13 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, T
     );
     CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, inst, (void*)&method));
 
+    delegate->method_ptr = (void(*)())DelegateWrapperInstance<R, I, TArgs...>::Invoke;
+    delegate->invoke_impl = (void(*)())DelegateWrapperInstance<R, I, TArgs...>::Invoke;
+    delegate->invoke_impl_this = (Il2CppObject*)inst;
+
     custom_types::logger.debug("Created instance delegate: {} ({}), for instance: {} with MethodInfo*: {}", fmt::ptr(delegate), fmt::ptr(delegateClass), fmt::ptr(inst), fmt::ptr(method));
-    log_delegate(reinterpret_cast<Il2CppDelegate*>(delegate));
-    return delegate;
+    log_delegate(delegate);
+    return reinterpret_cast<T>(delegate);
 }
 
 /// @brief Makes a delegate wrapping a context function (such as a context lambda).
