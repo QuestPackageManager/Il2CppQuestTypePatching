@@ -595,20 +595,17 @@ void Register::EnsureHooks() {
         INSTALL_HOOK_DIRECT(logger, GlobalMetadata_GetTypeInfoFromHandle, (void*)il2cpp_functions::il2cpp_GlobalMetadata_GetTypeInfoFromHandle);
         INSTALL_HOOK_DIRECT(logger, GlobalMetadata_GetTypeInfoFromTypeDefinitionIndex, (void*)il2cpp_functions::il2cpp_GlobalMetadata_GetTypeInfoFromTypeDefinitionIndex);
         INSTALL_HOOK_DIRECT(logger, Class_Init, (void*)il2cpp_functions::il2cpp_Class_Init);
-        uintptr_t GetScriptingClassAddr = findPattern(baseAddr("libunity.so"), "ff 43 02 d1 fa 23 00 f9 f9 63 05 a9 f7 5b 06 a9 f5 53 07 a9 f3 7b 08 a9 57 d0 3b d5 e8 16 40 f9 f6 03 01 aa");
+        uintptr_t GetScriptingClassAddr = findPattern(baseAddr("libunity.so"), "ff 43 02 d1 fe 23 00 f9 fa 67 05 a9 f8 5f 06 a9 f6 57 07 a9 f4 4f 08 a9 57 d0 3b d5 e8 16 40 f9 f6 03 01 aa");
         INSTALL_HOOK_DIRECT(logger, GetScriptingClass, reinterpret_cast<void*>(GetScriptingClassAddr));
 
         // get the location of Type::GetClassOrElementClass
-        uintptr_t get_class_or_element_class_addr = (uintptr_t)il2cpp_functions::il2cpp_type_get_class_or_element_class;
-        uint32_t b = *(uint32_t*)get_class_or_element_class_addr;
-        // b instructions have an immediate of 26 bits, which is the offset in instructions (in bytes / 4)
-        // leftmost 6 bits are the instruction identifier, rightmost 26 are the immediate
-        constexpr const uint32_t b_immediate_mask = 0x03ffffff;
-        auto offset = b & b_immediate_mask;
-        // offset off of the would-be PC, then get that address
-        uintptr_t GetClassOrElementClassAddr = get_class_or_element_class_addr + offset * sizeof(uint32_t);
-
-        INSTALL_HOOK_DIRECT(logger, Type_GetClassOrElementClass, reinterpret_cast<void*>(GetClassOrElementClassAddr));
+        uint32_t* get_class_or_element_class_addr = (uint32_t*)il2cpp_functions::il2cpp_type_get_class_or_element_class;
+        auto opt = cs::findNthB<1>(get_class_or_element_class_addr);
+        if(opt) {
+            INSTALL_HOOK_DIRECT(logger, Type_GetClassOrElementClass, reinterpret_cast<void*>(opt.value()));
+        } else {
+            logger.warn("Failed to find 1st bl in il2cpp_type_get_class_or_element_class!");
+        }
         // {
         //     // We need to do a tiny bit of xref tracing to find the bottom level
         //     Class::FromName call

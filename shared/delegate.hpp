@@ -9,13 +9,16 @@ namespace custom_types {
 
 CUSTOM_TYPES_EXPORT int get_delegate_count();
 
-inline void setup_for_delegate([[maybe_unused]] MethodInfo* info) {
-    // The method in question actually isn't quite fit for being a proper delegate
-    // So, here we will set it just to make sure it does what we want.
-    info->indirect_call_via_invokers = true;
-    // TODO: Support virtual invokes some time in the distant, distant future.
-    // m->slot = kInvalidIl2CppMethodSlot;
-    // m->invoker_method = parent_invoke->invoker_method;
+template <typename T>
+using make_boxed_t = std::conditional_t<il2cpp_utils::il2cpp_type_check::need_box<T>::value, T*, T>;
+
+template <typename T>
+auto unbox_arg(T arg) {
+    if constexpr (std::is_pointer_v<T> && il2cpp_utils::il2cpp_type_check::need_box<std::remove_pointer_t<T>>::value) {
+        return *arg;
+    } else {
+        return arg;
+    }
 }
 
 /// @brief The wrapper for an invokable delegate without an existing context.
@@ -109,7 +112,7 @@ public:
     std::function<RI(TArgsI...)> wrappedFunc;
 
     // The invoke method that wraps the delegate call
-    static RI Invoke(DelegateWrapperStatic<RI, TArgsI...>* instance, TArgsI... args);
+    static RI Invoke(DelegateWrapperStatic<RI, TArgsI...>* instance, make_boxed_t<TArgsI>... args);
 private:
     struct ___MethodRegistrator_Invoke : ::custom_types::MethodRegistrator {
         constexpr const char* name() const override {
@@ -213,15 +216,15 @@ namespace custom_types {
 /// @param args The arguments to pass to this function.
 /// @return The return from the wrapped function.
 template<class RI, class... TArgsI>
-RI __attribute__((noinline)) DelegateWrapperStatic<RI, TArgsI...>::Invoke(DelegateWrapperStatic<RI, TArgsI...>* instance, TArgsI... args) {
+RI __attribute__((noinline)) DelegateWrapperStatic<RI, TArgsI...>::Invoke(DelegateWrapperStatic<RI, TArgsI...>* instance, make_boxed_t<TArgsI>... args) {
     IL2CPP_CATCH_HANDLER(
         if (!instance || !instance->wrappedFunc) {
             custom_types::logger.critical("Attempting to invoke delegate on a null or destroyed instance: {}, class: {} ({})", fmt::ptr(instance), fmt::ptr(___TypeRegistration::klass_ptr), ___TypeRegistration::get()->name());
         }
         if constexpr (std::is_same_v<RI, void>) {
-            instance->wrappedFunc(args...);
+            instance->wrappedFunc(unbox_arg(args)...);
         } else {
-            return instance->wrappedFunc(args...);
+            return instance->wrappedFunc(unbox_arg(args)...);
         }
     )
 }
@@ -320,7 +323,7 @@ public:
     DelegateWrapperInstance() = delete;
 
     // The invoke method that wraps the delegate call
-    static RI Invoke(DelegateWrapperInstance<RI, TI, TArgsI...>* instance, TArgsI... args);
+    static RI Invoke(DelegateWrapperInstance<RI, TI, TArgsI...>* instance, make_boxed_t<TArgsI>... args);
 private:
     struct ___MethodRegistrator_Invoke : ::custom_types::MethodRegistrator {
         constexpr const char* name() const override {
@@ -450,15 +453,15 @@ namespace custom_types {
 /// @param args The arguments to pass to this function.
 /// @return The return from the wrapped function.
 template<class RI, class TI, class... TArgsI>
-RI __attribute__((noinline)) DelegateWrapperInstance<RI, TI, TArgsI...>::Invoke(DelegateWrapperInstance<RI, TI, TArgsI...>* instance, TArgsI... args) {
+RI __attribute__((noinline)) DelegateWrapperInstance<RI, TI, TArgsI...>::Invoke(DelegateWrapperInstance<RI, TI, TArgsI...>* instance, make_boxed_t<TArgsI>... args) {
     IL2CPP_CATCH_HANDLER(
         if (!instance || !instance->wrappedFunc) {
             custom_types::logger.critical("Attempting to invoke instance delegate that is null or has been destroyed! {}, class: {} ({})", fmt::ptr(instance), fmt::ptr(___TypeRegistration::klass_ptr), ___TypeRegistration::get()->name());
         }
         if constexpr (std::is_same_v<RI, void>) {
-            instance->wrappedFunc(instance->obj, args...);
+            instance->wrappedFunc(instance->obj, unbox_arg(args)...);
         } else {
-            return instance->wrappedFunc(instance->obj, args...);
+            return instance->wrappedFunc(instance->obj, unbox_arg(args)...);
         }
     )
 }
@@ -481,11 +484,9 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs.
     // We need to ensure static initialization of both the dtor method registrator
     // and the invoke method registrator:
     custom_types::logger.debug("Delegate dtor registrator: {}", fmt::ptr(DelegateWrapperStatic<R, TArgs...>::___dtor_MethodRegistrator.get()));
-    auto* invokeMethod = CRASH_UNLESS(il2cpp_functions::class_get_method_from_name(delegateClass, "Invoke", -1));
     auto* method = DelegateWrapperStatic<R, TArgs...>::___Invoke_MethodRegistrator.get();
-    setup_for_delegate(method);
 
-    auto* delegate = reinterpret_cast<T>(il2cpp_functions::object_new(delegateClass));
+    auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
     // find the ctor method that takes object, intptr
     auto ctor_minfo = THROW_UNLESS(
         il2cpp_utils::FindMethod(
@@ -500,19 +501,21 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs.
     );
     CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, inst, (void*)&method));
 
+    delegate->method_ptr = (void(*)())DelegateWrapperStatic<R, TArgs...>::Invoke;
+    delegate->invoke_impl = (void(*)())DelegateWrapperStatic<R, TArgs...>::Invoke;
+    delegate->invoke_impl_this = (Il2CppObject*)inst;
+
     custom_types::logger.debug("Created delegate: {} ({}), for instance: {} with MethodInfo*: {}", fmt::ptr(delegate), fmt::ptr(delegateClass), fmt::ptr(inst), fmt::ptr(method));
-    log_delegate(reinterpret_cast<Il2CppDelegate*>(delegate));
-    return delegate;
+    log_delegate(delegate);
+    return reinterpret_cast<T>(delegate);
 }
 
 template<class T = MulticastDelegate*, class R, class I, class... TArgs>
 T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, TArgs...>* inst) {
     custom_types::logger.debug("Delegate instance dtor registrator: {}", fmt::ptr(DelegateWrapperInstance<R, I, TArgs...>::___dtor_MethodRegistrator.get()));
-    auto* invokeMethod = CRASH_UNLESS(il2cpp_functions::class_get_method_from_name(delegateClass, "Invoke", -1));
     auto* method = DelegateWrapperInstance<R, I, TArgs...>::___Invoke_MethodRegistrator.get();
-    setup_for_delegate(method);
 
-    auto* delegate = reinterpret_cast<T>(il2cpp_functions::object_new(delegateClass));
+    auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
     // find the ctor method that takes object, intptr
     auto ctor_minfo = THROW_UNLESS(
         il2cpp_utils::FindMethod(
@@ -527,9 +530,13 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, T
     );
     CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, inst, (void*)&method));
 
+    delegate->method_ptr = (void(*)())DelegateWrapperInstance<R, I, TArgs...>::Invoke;
+    delegate->invoke_impl = (void(*)())DelegateWrapperInstance<R, I, TArgs...>::Invoke;
+    delegate->invoke_impl_this = (Il2CppObject*)inst;
+
     custom_types::logger.debug("Created instance delegate: {} ({}), for instance: {} with MethodInfo*: {}", fmt::ptr(delegate), fmt::ptr(delegateClass), fmt::ptr(inst), fmt::ptr(method));
-    log_delegate(reinterpret_cast<Il2CppDelegate*>(delegate));
-    return delegate;
+    log_delegate(delegate);
+    return reinterpret_cast<T>(delegate);
 }
 
 /// @brief Makes a delegate wrapping a context function (such as a context lambda).

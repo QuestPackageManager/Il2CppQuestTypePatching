@@ -16,7 +16,7 @@ void log_delegate(Il2CppDelegate* d) {
         logger.debug("extraArg: {}", d->extraArg);
         logger.debug("invoke_impl: {}", fmt::ptr(d->invoke_impl));
         logger.debug("method: {}", fmt::ptr(d->method));
-        logger.debug("method_code: {}", fmt::ptr(d->method_code));
+        // logger.debug("method_code: {}", fmt::ptr(d->));
         logger.debug("method_info: {}", fmt::ptr(d->method_info));
         logger.debug("method_is_virtual: {}", (bool)d->method_is_virtual);
         logger.debug("method_ptr: {}", fmt::ptr(d->method_ptr));
