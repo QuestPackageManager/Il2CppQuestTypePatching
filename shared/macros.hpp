@@ -65,7 +65,7 @@
 namespace namespaze_ { \
     class name_; \
     namespace __custom_types_internal { \
-        struct ___TypeRegistration_##name_ : ::custom_types::TypeRegistration { \
+        struct CUSTOM_TYPES_EXPORT_VISIBILITY ___TypeRegistration_##name_ : ::custom_types::TypeRegistration { \
             ___TypeRegistration_##name_() { \
                 ::custom_types::Register::AddType(this); \
                 instance = this; \
@@ -169,7 +169,7 @@ class CUSTOM_TYPES_EXPORT_VISIBILITY namespaze_::name_ : \
 namespace namespaze_ { \
     class name_; \
     namespace __custom_types_internal { \
-        struct ___TypeRegistration_##name_ : ::custom_types::TypeRegistration { \
+        struct CUSTOM_TYPES_EXPORT_VISIBILITY ___TypeRegistration_##name_ : ::custom_types::TypeRegistration { \
             ___TypeRegistration_##name_() { \
                 ::custom_types::Register::AddType(this); \
                 instance = this; \
