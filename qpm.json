@@ -19,12 +19,16 @@
   },
   "workspace": {
     "scripts": {
-      "build": ["pwsh ./build.ps1"],
-      "test": ["pwsh ./build.ps1 -local_test"],
+      "build": [
+        "pwsh ./build.ps1"
+      ],
       "qmod": [
         "pwsh ./build.ps1 -clean",
         "qpm qmod manifest",
         "pwsh ./createqmod.ps1 CustomTypes -clean"
+      ],
+      "test": [
+        "pwsh ./build.ps1 -local_test"
       ]
     },
     "qmodIncludeDirs": [
@@ -37,7 +41,7 @@
   "dependencies": [
     {
       "id": "beatsaber-hook",
-      "versionRange": "^6.1.0",
+      "versionRange": "^6.2.0",
       "additionalData": {}
     },
     {
@@ -49,7 +53,7 @@
     },
     {
       "id": "paper",
-      "versionRange": "^3.6.1",
+      "versionRange": "^3.7.0",
       "additionalData": {}
     }
   ]
