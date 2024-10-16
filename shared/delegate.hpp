@@ -10,7 +10,8 @@ namespace custom_types {
 CUSTOM_TYPES_EXPORT int get_delegate_count();
 
 template <typename T>
-using make_boxed_t = std::conditional_t<il2cpp_utils::il2cpp_type_check::need_box<T>::value, T*, T>;
+using make_boxed_t = std::conditional_t<std::is_same_v<T, bool>, bool, 
+                std::conditional_t<il2cpp_utils::il2cpp_type_check::need_box<T>::value, T*, T>>;
 
 template <typename T>
 auto unbox_arg(T arg) {
