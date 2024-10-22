@@ -45,7 +45,7 @@ public:
             return {};
         }
         std::vector<::custom_types::MethodRegistrator*> const getMethods() const override {
-            return {&___Invoke_MethodRegistrator, &___dtor_MethodRegistrator};
+            return {&___Invoke_MethodRegistrator, &___dtor_MethodRegistrator, &___InvokeUnboxed_MethodRegistrator};
         }
         static inline char* st_fields;
         char*& static_fields() override {
@@ -148,8 +148,44 @@ private:
             return &::custom_types::invoker_creator<decltype(&___TargetType::Invoke)>::invoke;
         }
     };
+
+    struct ___MethodRegistrator_InvokeUnboxed : ::custom_types::MethodRegistrator {
+        constexpr const char* name() const override {
+            return "InvokeUnboxed";
+        }
+        constexpr const char* csharpName() const override {
+            return "InvokeUnboxed";
+        }
+        int flags() const override {
+            return METHOD_ATTRIBUTE_STATIC;
+        }
+        const MethodInfo* virtualMethod() const override {
+            return nullptr;
+        }
+        const Il2CppType* returnType() const override {
+            ::il2cpp_functions::Init();
+            return ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<RI>::get();
+        }
+        std::vector<const Il2CppType*> params() const override {
+            il2cpp_functions::Init();
+            return {
+                ::il2cpp_functions::class_get_type(___TypeRegistration::klass_ptr),
+                (::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<TArgsI>::get())...
+            };
+        }
+        uint8_t params_size() const override {
+            return sizeof...(TArgsI) + 1;
+        }
+        Il2CppMethodPointer methodPointer() const override {
+            return reinterpret_cast<Il2CppMethodPointer>(&___TargetType::InvokeUnboxed);
+        }
+        InvokerMethod invoker() const override {
+            return &::custom_types::invoker_creator<decltype(&___TargetType::InvokeUnboxed)>::invoke;
+        }
+    };
 public:
     static inline ___MethodRegistrator_Invoke ___Invoke_MethodRegistrator;
+    static inline ___MethodRegistrator_InvokeUnboxed ___InvokeUnboxed_MethodRegistrator;
 
 public:
     void dtor();
@@ -280,7 +316,7 @@ public:
             return {};
         }
         std::vector<::custom_types::MethodRegistrator*> const getMethods() const override {
-            return {&___Invoke_MethodRegistrator, &___dtor_MethodRegistrator};
+            return {&___Invoke_MethodRegistrator, &___dtor_MethodRegistrator, &___InvokeUnboxed_MethodRegistrator};
         }
         static inline char* st_fields;
         char*& static_fields() override {
@@ -382,8 +418,44 @@ private:
             return &::custom_types::invoker_creator<decltype(&___TargetType::Invoke)>::invoke;
         }
     };
+
+    struct ___MethodRegistrator_InvokeUnboxed : ::custom_types::MethodRegistrator {
+        constexpr const char* name() const override {
+            return "InvokeUnboxed";
+        }
+        constexpr const char* csharpName() const override {
+            return "InvokeUnboxed";
+        }
+        int flags() const override {
+            return METHOD_ATTRIBUTE_STATIC;
+        }
+        const MethodInfo* virtualMethod() const override {
+            return nullptr;
+        }
+        const Il2CppType* returnType() const override {
+            ::il2cpp_functions::Init();
+            return ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<RI>::get();
+        }
+        std::vector<const Il2CppType*> params() const override {
+            il2cpp_functions::Init();
+            return {
+                ::il2cpp_functions::class_get_type(___TypeRegistration::klass_ptr),
+                (::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<TArgsI>::get())...
+            };
+        }
+        uint8_t params_size() const override {
+            return sizeof...(TArgsI) + 1;
+        }
+        Il2CppMethodPointer methodPointer() const override {
+            return reinterpret_cast<Il2CppMethodPointer>(&___TargetType::InvokeUnboxed);
+        }
+        InvokerMethod invoker() const override {
+            return &::custom_types::invoker_creator<decltype(&___TargetType::InvokeUnboxed)>::invoke;
+        }
+    };
 public:
     static inline ___MethodRegistrator_Invoke ___Invoke_MethodRegistrator;
+    static inline ___MethodRegistrator_InvokeUnboxed ___InvokeUnboxed_MethodRegistrator;
 
 private:
     struct ___FieldRegistrator_obj : ::custom_types::FieldRegistrator {
@@ -528,7 +600,13 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs.
     // We need to ensure static initialization of both the dtor method registrator
     // and the invoke method registrator:
     custom_types::logger.debug("Delegate dtor registrator: {}", fmt::ptr(DelegateWrapperStatic<R, TArgs...>::___dtor_MethodRegistrator.get()));
-    auto* method = il2cpp_utils::FindMethodUnsafe(delegateClass, "Invoke", -1);
+    
+    MethodInfo* method;
+    if constexpr (boxArgs) {
+        method = DelegateWrapperStatic<R, TArgs...>::___Invoke_MethodRegistrator.get();
+    } else {
+        method = DelegateWrapperStatic<R, TArgs...>::___InvokeUnboxed_MethodRegistrator.get();
+    }
 
     auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
     // find the ctor method that takes object, intptr
@@ -543,7 +621,7 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs.
             }
         )
     );
-    CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, delegate, (void*)&method));
+    CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, inst, (void*)&method));
 
     if constexpr (boxArgs) {
         delegate->method_ptr = (void(*)())DelegateWrapperStatic<R, TArgs...>::Invoke;
@@ -563,7 +641,13 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs.
 template<class T = MulticastDelegate*, bool boxArgs = true, class R, class I, class... TArgs>
 T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, TArgs...>* inst) {
     custom_types::logger.debug("Delegate instance dtor registrator: {}", fmt::ptr(DelegateWrapperInstance<R, I, TArgs...>::___dtor_MethodRegistrator.get()));
-    auto* method = il2cpp_utils::FindMethodUnsafe(delegateClass, "Invoke", -1);
+
+    MethodInfo* method;
+    if constexpr (boxArgs) {
+        method = DelegateWrapperInstance<R, I, TArgs...>::___Invoke_MethodRegistrator.get();
+    } else {
+        method = DelegateWrapperInstance<R, I, TArgs...>::___InvokeUnboxed_MethodRegistrator.get();
+    }
 
     auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
     // find the ctor method that takes object, intptr
@@ -578,7 +662,7 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, T
             }
         )
     );
-    CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, delegate, (void*)&method));
+    CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, inst, (void*)&method));
 
     if constexpr (boxArgs) {
         delegate->method_ptr = (void(*)())DelegateWrapperInstance<R, I, TArgs...>::Invoke;
