@@ -589,7 +589,7 @@ void DelegateWrapperInstance<RI, TI, TArgsI...>::dtor() {
 
 CUSTOM_TYPES_EXPORT void log_delegate(Il2CppDelegate* d);
 
-template<class T = MulticastDelegate*, bool boxArgs = true, class R, class... TArgs>
+template<class T = MulticastDelegate*, bool boxArgs = false, class R, class... TArgs>
 T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperStatic<R, TArgs...>* inst) {
     // TODO: We could still make this a native method info, but for now it's much much easier to just wrap it
     // This will make delegates a little bit slower than just a pure native call, since it'll have to box the args
@@ -688,7 +688,7 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, T
 /// @param instance The (move constructible) instance reference to provide to the delegate. This instance is moved and will no longer be valid.
 /// @param f The function to invoke with the delegate.
 /// @return The created delegate.
-template<typename T = MulticastDelegate*, bool boxArgs = true, class R, class... TArgs>
+template<typename T = MulticastDelegate*, bool boxArgs = false, class R, class... TArgs>
 T MakeDelegate(const Il2CppClass* delegateClass, std::function<R(TArgs...)> const& f) {
     il2cpp_functions::Init();
     // NOTE: This static field MUST be used in order for it to be instantiated within the generic, thus, it is important to NOT remove this log
@@ -706,7 +706,7 @@ T MakeDelegate(const Il2CppClass* delegateClass, std::function<R(TArgs...)> cons
 /// @param instance The (move constructible) instance reference to provide to the delegate. This instance is moved and will no longer be valid.
 /// @param f The function to invoke with the delegate.
 /// @return The created delegate.
-template<typename T = MulticastDelegate*, bool boxArgs = true, class R, class... TArgs>
+template<typename T = MulticastDelegate*, bool boxArgs = false, class R, class... TArgs>
 T MakeDelegate(std::function<R(TArgs...)> const& f) {
     return MakeDelegate<T, boxArgs>(classof(T), f);
 }
