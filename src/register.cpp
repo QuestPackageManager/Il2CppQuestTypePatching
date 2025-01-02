@@ -584,7 +584,7 @@ void Register::EnsureHooks() {
     std::lock_guard lock(installationMtx);
     if (!installed) {
         il2cpp_functions::Init();
-        Paper::Logger::RegisterFileContextId(custom_types::logger.tag, "CustomTypesPaper");
+        Paper::Logger::RegisterFileContextId(custom_types::logger.tag);
 
         logger.debug("Installing FromIl2CppType hook...");
         if constexpr (sizeof(Il2CppCodeGenModule) < 104) {
