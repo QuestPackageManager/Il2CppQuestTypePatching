@@ -16,7 +16,7 @@ set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # compile options used
 add_link_options(-Wl,--exclude-libs,ALL)
 add_compile_options(-frtti -fPIE -fPIC -fexceptions -fvisibility=hidden)
-add_compile_options(-Wall -Werror -Wextra -Wno-invalid-offsetof -O3)
+add_compile_options(-Wall -Werror -Wextra -Wno-invalid-offsetof -O3 -Wno-vla-cxx-extension)
 # Extra -Wno's that were not there originally to make it work
 add_compile_options(-Wno-unused-variable -Wno-unused-function)
 # compile definitions used
@@ -31,6 +31,9 @@ add_compile_definitions(NO_VERBOSE_LOGS)
 if (NOT DEFINED LOCAL_TEST)
     add_compile_definitions(CT_USE_GCDESCRIPTOR_DEBUG)
 endif()
+
+string(LENGTH "${CMAKE_CURRENT_LIST_DIR}/" FOLDER_LENGTH)
+add_compile_definitions("PAPER_ROOT_FOLDER_LENGTH=${FOLDER_LENGTH}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
