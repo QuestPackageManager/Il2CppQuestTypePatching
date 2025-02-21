@@ -12,5 +12,6 @@
     "${binary}"
   ],
   "fileCopies": [],
-  "copyExtensions": []
+  "copyExtensions": [],
+  "isLibrary": true
 }
