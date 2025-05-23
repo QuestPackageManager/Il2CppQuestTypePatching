@@ -501,8 +501,8 @@ struct DelegateWrapperInstance : Il2CppObject {
             return 0;
         }
         Il2CppMethodPointer methodPointer() const override {
-            static auto mptr = &DelegateWrapperInstance<RI, TArgsI...>::dtor;
-            return reinterpret_cast<Il2CppMethodPointer>(+[](DelegateWrapperInstance<RI, TArgsI...>* inst) { (inst->*mptr)(); });
+            static auto mptr = &___TargetType::dtor;
+            return reinterpret_cast<Il2CppMethodPointer>(+[](___TargetType* inst) { (inst->*mptr)(); });
         }
         InvokerMethod invoker() const override {
             return &::custom_types::invoker_creator<decltype(&___TargetType::dtor)>::invoke;
@@ -626,6 +626,12 @@ template <class T = MulticastDelegate*,  class R, class I, class... TArgs>
 T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, TArgs...>* inst) {
     custom_types::logger.debug("Delegate instance dtor registrator: {}", fmt::ptr(DelegateWrapperInstance<R, I, TArgs...>::___dtor_MethodRegistrator.get()));
 
+    auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
+    // find the ctor method that takes object, intptr
+    const MethodInfo* ctor_minfo = THROW_UNLESS(
+        il2cpp_utils::FindMethod(const_cast<Il2CppClass*>(delegateClass), ".ctor", std::array<Il2CppClass*, 0>{},
+                                 std::array<const Il2CppType*, 2>{ il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<Il2CppObject*>::get(), &il2cpp_functions::defaults->int_class->this_arg }));
+
     // find the invoke method
     const MethodInfo* invoke_minfo;
     auto methodSpan = std::span(delegateClass->methods, delegateClass->method_count);
@@ -639,16 +645,13 @@ T MakeDelegate(const Il2CppClass* delegateClass, DelegateWrapperInstance<R, I, T
 
     MethodInfo* method;
     if (invoke_minfo->has_full_generic_sharing_signature) {
+        // boxed
         method = DelegateWrapperInstance<R, I, TArgs...>::___Invoke_MethodRegistrator.get();
     } else {
+        // unboxed
         method = DelegateWrapperInstance<R, I, TArgs...>::___InvokeUnboxed_MethodRegistrator.get();
     }
 
-    auto* delegate = reinterpret_cast<Il2CppDelegate*>(il2cpp_functions::object_new(delegateClass));
-    // find the ctor method that takes object, intptr
-    auto ctor_minfo = THROW_UNLESS(
-        il2cpp_utils::FindMethod(const_cast<Il2CppClass*>(delegateClass), ".ctor", std::array<Il2CppClass*, 0>{},
-                                 std::array<const Il2CppType*, 2>{ il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<Il2CppObject*>::get(), &il2cpp_functions::defaults->int_class->this_arg }));
     CRASH_UNLESS(il2cpp_utils::RunMethodOpt<void, false>(delegate, ctor_minfo, inst, (void*)&method));
 
     if (invoke_minfo->has_full_generic_sharing_signature) {
