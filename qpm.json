@@ -6,7 +6,7 @@
   "info": {
     "name": "custom-types",
     "id": "custom-types",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "url": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching",
     "additionalData": {
       "overrideSoName": "libcustom-types.so",
@@ -43,7 +43,7 @@
   "dependencies": [
     {
       "id": "beatsaber-hook",
-      "versionRange": "^6.2.0",
+      "versionRange": "^7.0.0",
       "additionalData": {}
     },
     {
@@ -56,6 +56,11 @@
     {
       "id": "paper2_scotland2",
       "versionRange": "^4.2.1",
+      "additionalData": {}
+    },
+    {
+      "id": "flamingo",
+      "versionRange": "^1.1.2",
       "additionalData": {}
     }
   ]

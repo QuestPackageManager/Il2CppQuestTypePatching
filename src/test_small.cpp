@@ -2,7 +2,7 @@
 #include "macros.hpp"
 
 DECLARE_CLASS(Custom, Tester, "System", "Object", sizeof(Il2CppObject)) {
-    DECLARE_STATIC_FIELD(int, x);
+    // DECLARE_STATIC_FIELD(int, x);
     DECLARE_INSTANCE_FIELD_DEFAULT(float, z, 3.0f);
     DECLARE_INSTANCE_METHOD(bool, test, int arg1, int arg2);
     // bool test(int arg1, int arg2);

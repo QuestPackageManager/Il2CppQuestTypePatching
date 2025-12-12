@@ -25,7 +25,7 @@ add_compile_definitions(MOD_ID=\"${MOD_ID}\")
 # TODO: Implement more robustly
 add_compile_definitions(VERSION_LONG=1)
 add_compile_definitions(NEED_UNSAFE_CSHARP)
-add_compile_definitions(UNITY_2021)
+add_compile_definitions(UNITY_6)
 add_compile_definitions(NO_VERBOSE_LOGS)
 # For performing debug logging of very hard to diagnose issues
 if (NOT DEFINED LOCAL_TEST)

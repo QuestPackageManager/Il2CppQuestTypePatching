@@ -34,7 +34,7 @@ DECLARE_CLASS(Il2CppNamespace, MyType, "UnityEngine", "MonoBehaviour", sizeof(Il
 
     DECLARE_INSTANCE_METHOD(int, asdf, int q);
 
-    DECLARE_STATIC_FIELD(int, x);
+    // DECLARE_STATIC_FIELD(int, x);
 
     DECLARE_OVERRIDE_METHOD(Il2CppString*, ToString, il2cpp_utils::FindMethod("UnityEngine", "Object", "ToString"));
 };
@@ -89,36 +89,36 @@ void Il2CppNamespace::MyTypeDllTest::ctor() {
     custom_types::logImage(classof(MyTypeDllTest*)->image);
 }
 
-DECLARE_CLASS_INTERFACES(Il2CppNamespace, MyCustomBeatmapLevelPackCollection, "System", "Object", sizeof(Il2CppObject), INTERFACE_NAME("", "IBeatmapLevelPackCollection")) {
-    DECLARE_INSTANCE_FIELD(Il2CppArray*, wrappedArr);
+DECLARE_CLASS_INTERFACES(Il2CppNamespace, MyCustomRandom, "System", "Object", sizeof(Il2CppObject), INTERFACE_NAME("", "IRandom")) {
+    DECLARE_INSTANCE_FIELD(double, fixedValue);
 
-    DECLARE_OVERRIDE_METHOD(Il2CppArray*, get_beatmapLevelPacks, il2cpp_utils::FindMethod("", "IBeatmapLevelPackCollection", "get_beatmapLevelPacks"));
-    DECLARE_CTOR(ctor, Il2CppArray* originalArray);
+    DECLARE_OVERRIDE_METHOD(double, Sample, il2cpp_utils::FindMethod("", "IRandom", "Sample"));
+    DECLARE_CTOR(ctor, double value);
 };
 
-DEFINE_TYPE(Il2CppNamespace, MyCustomBeatmapLevelPackCollection);
+DEFINE_TYPE(Il2CppNamespace, MyCustomRandom);
 
-void Il2CppNamespace::MyCustomBeatmapLevelPackCollection::ctor(Il2CppArray* originalArray) {
+void Il2CppNamespace::MyCustomRandom::ctor(double value) {
     // We want to basically wrap the original instance.
     // Also log.
-    wrappedArr = originalArray;
-    logger.debug("Added original array: {}", fmt::ptr(originalArray));
+    fixedValue = value;
+    logger.debug("Created random with value: {}", fixedValue);;
 }
 
-Il2CppArray* Il2CppNamespace::MyCustomBeatmapLevelPackCollection::get_beatmapLevelPacks() {
-    logger.debug("My cool getter wrappedArr: {}!", fmt::ptr(wrappedArr));
-    return wrappedArr;
+double Il2CppNamespace::MyCustomRandom::Sample() {
+    logger.debug("My cool sample fixedValue: {}!", fixedValue);
+    return fixedValue;
 }
 
-DECLARE_CLASS_CUSTOM(Il2CppNamespace, MyCustomBeatmapCollection2, Il2CppNamespace::MyCustomBeatmapLevelPackCollection) {
-    DECLARE_CTOR(ctor, Il2CppArray* originalArray);
+DECLARE_CLASS_CUSTOM(Il2CppNamespace, MyCustomRandom2, Il2CppNamespace::MyCustomRandom) {
+    DECLARE_CTOR(ctor, double original);
 };
 
-DEFINE_TYPE(Il2CppNamespace, MyCustomBeatmapCollection2);
+DEFINE_TYPE(Il2CppNamespace, MyCustomRandom2);
 
-void Il2CppNamespace::MyCustomBeatmapCollection2::ctor(Il2CppArray* originalArray) {
-    wrappedArr = originalArray;
-    logger.debug("Custom inherited type original array: {}", fmt::ptr(originalArray));
+void Il2CppNamespace::MyCustomRandom2::ctor(double original) {
+    fixedValue = original;
+    logger.debug("Custom inherited type original: {}", original);
 }
 
 // TODO: Self references still do not work!
@@ -209,8 +209,19 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(MainMenuViewController_DidActivate, "", "Ma
                                      bool screenSystemEnabling) {
     logger.debug("MainMenuViewController.DidActivate!");
     MainMenuViewController_DidActivate(self, firstActivation, addedToHierarchy, screenSystemEnabling);
+
+    logger.debug("Creating random...");
+    auto* rand = Il2CppNamespace::MyCustomRandom::New_ctor(1.23456789);
+    logger.debug("Created random: {}", fmt::ptr(rand));
+    custom_types::logAll(classof(Il2CppNamespace::MyCustomRandom*));
+    auto* method = RET_V_UNLESS(logger, il2cpp_utils::ResolveVtableSlot(::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_class<Il2CppNamespace::MyCustomRandom*>::get(),
+                                                                                    il2cpp_utils::GetClassFromName("", "IRandom"), 0));
+    logger.debug("Found IRandom.Sample MethodInfo at {}", fmt::ptr(method));
+    auto num = RET_V_UNLESS(logger, il2cpp_utils::RunMethod<double>(rand, method).into_optional_result());
+    logger.debug("Sample method returned {}", num);
+
     logger.debug("Getting GO...");
-    auto* go = RET_V_UNLESS(logger, il2cpp_utils::GetPropertyValue(self, "gameObject").value_or(nullptr));
+    auto* go = RET_V_UNLESS(logger, il2cpp_utils::GetPropertyValue(self, "gameObject").into_optional_result().value_or(nullptr));
     logger.debug("Got GO: {}", fmt::ptr(go));
     custom_types::logAll(classof(Il2CppNamespace::MyType*));
     custom_types::logAll(classof(Il2CppNamespace::MyType*)->parent);
@@ -218,7 +229,7 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(MainMenuViewController_DidActivate, "", "Ma
     logger.debug("Custom System.Type: {}", fmt::ptr(customType));
     auto strType = RET_V_UNLESS(logger, il2cpp_utils::RunMethodOpt<StringW>(customType, "ToString"));
     logger.debug("ToString: {}", strType);
-    auto name = RET_V_UNLESS(logger, il2cpp_utils::GetPropertyValue<StringW>(customType, "Name"));
+    auto name = RET_V_UNLESS(logger, il2cpp_utils::GetPropertyValue<StringW>(customType, "Name").into_optional_result());
     logger.debug("Name: {}", name);
     logger.debug("Actual type: {}", fmt::ptr(&custom_types::Register::classes[0]->byval_arg));
     logger.debug("Type: {}", fmt::ptr(customType->type));
@@ -252,30 +263,12 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(MainMenuViewController_DidActivate, "", "Ma
 //     }
 // }
 
-MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapLevelModels_UpdateAllLoadedBeatmapLevelPacks, "", "BeatmapLevelModels", "UpdateAllLoadedBeatmapLevelPacks", void, Il2CppObject* self) {
-    BeatmapLevelModels_UpdateAllLoadedBeatmapLevelPacks(self);
-    auto* existing = CRASH_UNLESS(il2cpp_utils::GetFieldValue(self, "_allLoadedBeatmapLevelPackCollection"));
-    logger.debug("Existing: {}", fmt::ptr(existing));
-    auto* arr = CRASH_UNLESS(il2cpp_utils::GetPropertyValue(existing, "beatmapLevelPacks"));
-    logger.debug("Existing arr: {}", fmt::ptr(arr));
-    logger.debug("Constructing custom type and setting it to field!");
-    // auto* myType = CRASH_UNLESS(il2cpp_utils::New<Il2CppNamespace::MyCustomBeatmapLevelPackCollection*>(arr));
-    auto myType = Il2CppNamespace::MyCustomBeatmapLevelPackCollection::New_ctor((Il2CppArray*)arr);
-    logger.debug("Created new type: {}", fmt::ptr(myType));
-    auto* k = il2cpp_functions::object_get_class(existing);
-    custom_types::logAll(k);
-    k = il2cpp_functions::object_get_class((Il2CppObject*)myType);
-    custom_types::logAll(k);
-    CRASH_UNLESS(il2cpp_utils::SetFieldValue(self, "_allLoadedBeatmapLevelPackCollection", myType));
-}
-
 CUSTOM_TYPES_FUNC void load() {
     static constexpr auto& logger = custom_types::logger;
     logger.debug("Registering types! (current size: {})", custom_types::Register::classes.size());
     custom_types::Register::AutoRegister();
     logger.debug("Registered: {} types!", custom_types::Register::classes.size());
     INSTALL_HOOK(logger, MainMenuViewController_DidActivate);
-    INSTALL_HOOK(logger, BeatmapLevelModels_UpdateAllLoadedBeatmapLevelPacks);
     // auto k = CRASH_UNLESS(custom_types::Register::RegisterType<Il2CppNamespace::MyBeatmapObjectManager>());
     // INSTALL_HOOK_OFFSETLESS(BeatmapObjectSpawnController_SpawnNote, il2cpp_utils::FindMethodUnsafe("", "BeatmapObjectSpawnController", "SpawnNote", 2));
     // il2cpp_utils::LogClass(il2cpp_utils::GetClassFromName("Il2CppNamespace", "MyBeatmapObjectManager"));
