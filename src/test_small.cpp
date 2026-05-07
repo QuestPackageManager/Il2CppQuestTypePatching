@@ -20,9 +20,9 @@ DEFINE_TYPE(Custom, Test2);
 
 void testStuff() {
     custom_types::Register::AutoRegister();
-    static_assert(sizeof(Custom::Tester) == Custom::Tester::__IL2CPP_REFERENCE_TYPE_SIZE);
+    static_assert(sizeof(Custom::Tester) == sizeof(Custom::Tester::___TargetType));
     static_assert(sizeof(Custom::Tester) == sizeof(Il2CppObject) + sizeof(float));
-    static_assert(sizeof(Custom::Test2) == Custom::Test2::__IL2CPP_REFERENCE_TYPE_SIZE);
+    static_assert(sizeof(Custom::Test2) == sizeof(Custom::Test2::___TargetType));
     static_assert(sizeof(Custom::Test2) == sizeof(Custom::Tester) + sizeof(int));
 }
 #endif
