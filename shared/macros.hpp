@@ -533,7 +533,7 @@ static ___TargetType* New_ctor(auto&&... args) { \
         ::i2c::functions::initialize(); \
         obj = reinterpret_cast<___TargetType*>(::i2c::functions::object_new(___TypeRegistration::klass_ptr)); \
     } \
-    obj->name(std::forward<decltype(args)...>(args)...); \
+    obj->name(std::forward<decltype(args)>(args)...); \
     return obj; \
 } \
 ___CREATE_INSTANCE_METHOD(name, ".ctor", METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG | METHOD_ATTRIBUTE_SPECIAL_NAME | METHOD_ATTRIBUTE_RT_SPECIAL_NAME, nullptr)
@@ -631,7 +631,7 @@ void __ctor() { \
 template<bool Manual = false> \
 static ___TargetType* New_ctor(auto&&... args) { \
     static_assert(::custom_types::Decomposer<decltype(&___TargetType::__ctor)>::convertible<decltype(args)...>(), "Arguments provided to New_ctor must be convertible to the constructor!"); \
-    return ::i2c::new_ctor<___TargetType*, Manual>(std::forward<decltype(args)...>(args)...); \
+    return ::i2c::new_ctor<___TargetType*, Manual>(std::forward<decltype(args)>(args)...); \
 } \
 ___CREATE_INSTANCE_METHOD(__ctor, ".ctor", METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG | METHOD_ATTRIBUTE_SPECIAL_NAME | METHOD_ATTRIBUTE_RT_SPECIAL_NAME, nullptr)
 
