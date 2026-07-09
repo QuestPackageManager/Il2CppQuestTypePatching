@@ -58,7 +58,9 @@
       {
         "id": "mod-scripts",
         "versionRange": "^1.0.0",
-        "additionalData": {}
+        "additionalData": {
+          "private": true
+        }
       },
       {
         "id": "capstone",
