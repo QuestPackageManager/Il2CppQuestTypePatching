@@ -1,23 +1,22 @@
 // If LOCAL_TEST is defined, create a mod that uses custom types.
 // Otherwise, it will be built as a library.
 #ifdef LOCAL_TEST
-#include <unordered_map>
-#include "NoteData.hpp"
-#include "beatsaber-hook/shared/utils/hooking.hpp"
-#include "beatsaber-hook/shared/utils/il2cpp-functions.hpp"
-#include "beatsaber-hook/shared/utils/il2cpp-type-check.hpp"
-#include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
-#include "beatsaber-hook/shared/utils/logging.hpp"
-#include "beatsaber-hook/shared/utils/typedefs.h"
-#include "beatsaber-hook/shared/utils/utils.h"
 #include "coroutine.hpp"
 #include "logging.hpp"
 #include "macros.hpp"
 #include "register.hpp"
-#include "scotland2/shared/loader.hpp"
 #include "types.hpp"
+#include "beatsaber-hook/shared/api.hpp"
+#include "beatsaber-hook/shared/debug.hpp"
+#include "beatsaber-hook/shared/find.hpp"
+#include "beatsaber-hook/shared/hooking.hpp"
+#include "beatsaber-hook/shared/stringw.hpp"
+#include "beatsaber-hook/shared/types.hpp"
+#include "scotland2/shared/loader.hpp"
 
-modloader::ModInfo modInfo{ "test", "0.0.0", 0 };
+#include <unordered_map>
+
+modloader::ModInfo modInfo{"test", "0.0.0", 0};
 
 static constexpr auto logger = ::custom_types::logger;
 
@@ -36,7 +35,7 @@ DECLARE_CLASS(Il2CppNamespace, MyType, "UnityEngine", "MonoBehaviour", sizeof(Il
 
     // DECLARE_STATIC_FIELD(int, x);
 
-    DECLARE_OVERRIDE_METHOD(Il2CppString*, ToString, il2cpp_utils::FindMethod("UnityEngine", "Object", "ToString"));
+    DECLARE_OVERRIDE_METHOD(StringW, ToString, i2c::find_method({"UnityEngine", "Object"}, "ToString"));
 };
 
 DEFINE_TYPE(Il2CppNamespace, MyType);
@@ -54,24 +53,24 @@ void Il2CppNamespace::MyType::Start() {
     // We ARE NOT able to call GetClassFromName.
     // This is because our class name is NOT in the nameToClassHashTable
     // However, we ARE able to get our Il2CppClass* via the klass private static field of this type.
-    auto* il2cppKlass = il2cpp_utils::GetClassFromName("Il2CppNamespace", "MyType");
+    auto* il2cppKlass = i2c::get_class_from_name("Il2CppNamespace", "MyType");
     logger.debug("il2cpp obtained klass: {}", fmt::ptr(il2cppKlass));
     logger.debug("klass: {}", fmt::ptr(___TypeRegistration::klass_ptr));
-    auto* asdfMethod = il2cpp_utils::FindMethodUnsafe(___TypeRegistration::klass_ptr, "asdf", 1);
+    auto* asdfMethod = i2c::find_method(___TypeRegistration::klass_ptr, {"asdf", 1});
     logger.debug("asdf method info: {}", fmt::ptr(asdfMethod));
     // logger.debug("x: {}", x);
     // logger.debug("y: ({}, {}, {})", y.x, y.y, y.z);
-    logger.debug("runtime invoke of asdf(1): {}", CRASH_UNLESS(il2cpp_utils::RunMethodOpt<int>(this, asdfMethod, 1)));
+    logger.debug("runtime invoke of asdf(1): {}", i2c::run_method<int>(this, asdfMethod, 1));
 }
 
 int Il2CppNamespace::MyType::asdf(int q) {
     return q + 1;
 }
 
-Il2CppString* Il2CppNamespace::MyType::ToString() {
+StringW Il2CppNamespace::MyType::ToString() {
     // We want to create a C# string that is different than from what might otherwise be expected!
     logger.info("Calling custom ToString!");
-    return il2cpp_utils::newcsstr("My Custom ToString!");
+    return "My Custom ToString!";
 }
 
 void Il2CppNamespace::MyType::Test([[maybe_unused]] int x, [[maybe_unused]] float y) {
@@ -86,13 +85,13 @@ DEFINE_TYPE(Il2CppNamespace, MyTypeDllTest);
 
 void Il2CppNamespace::MyTypeDllTest::ctor() {
     logger.debug("MyTypeDllTest debug call!");
-    custom_types::logImage(classof(MyTypeDllTest*)->image);
+    custom_types::logImage(i2c::class_of<MyTypeDllTest*>()->image);
 }
 
 DECLARE_CLASS_INTERFACES(Il2CppNamespace, MyCustomRandom, "System", "Object", sizeof(Il2CppObject), INTERFACE_NAME("", "IRandom")) {
     DECLARE_INSTANCE_FIELD(double, fixedValue);
 
-    DECLARE_OVERRIDE_METHOD(double, Sample, il2cpp_utils::FindMethod("", "IRandom", "Sample"));
+    DECLARE_OVERRIDE_METHOD(double, Sample, i2c::find_method({"", "IRandom"}, "Sample"));
     DECLARE_CTOR(ctor, double value);
 };
 
@@ -102,7 +101,7 @@ void Il2CppNamespace::MyCustomRandom::ctor(double value) {
     // We want to basically wrap the original instance.
     // Also log.
     fixedValue = value;
-    logger.debug("Created random with value: {}", fixedValue);;
+    logger.debug("Created random with value: {}", fixedValue);
 }
 
 double Il2CppNamespace::MyCustomRandom::Sample() {
@@ -121,18 +120,17 @@ void Il2CppNamespace::MyCustomRandom2::ctor(double original) {
     logger.debug("Custom inherited type original: {}", original);
 }
 
-// TODO: Self references still do not work!
-// DECLARE_CLASS(SmallTest, Test, "System", "Object", sizeof(Il2CppObject)) {
-//     DECLARE_STATIC_METHOD(SmallTest::Test*, SelfRef, int x);
-//     DECLARE_STATIC_FIELD(SmallTest::Test*, selfRefField);
-//     DECLARE_STATIC_FIELD(Il2CppNamespace::MyType*, AnotherRef);
-// };
+DECLARE_CLASS(SmallTest, Test, "System", "Object", sizeof(Il2CppObject)) {
+    DECLARE_STATIC_METHOD(SmallTest::Test*, SelfRef, int);
+    DECLARE_STATIC_FIELD(SmallTest::Test*, selfRefField);
+    DECLARE_STATIC_FIELD(Il2CppNamespace::MyType*, AnotherRef);
+};
 
-// DEFINE_TYPE(SmallTest, Test);
+DEFINE_TYPE(SmallTest, Test);
 
-// SmallTest::Test* SmallTest::Test::SelfRef(int x) {
-//     return CRASH_UNLESS(il2cpp_utils::New<SmallTest::Test*>());
-// }
+SmallTest::Test* SmallTest::Test::SelfRef(int) {
+    return i2c::new_ctor<SmallTest::Test*>();
+}
 
 DECLARE_VALUE(ValueTest, Test, "System", "ValueType", 0) {
     DECLARE_INSTANCE_FIELD(int, x);
@@ -159,7 +157,7 @@ void SmallTest::TestIt2::ctor() {
 
 DECLARE_CLASS(SmallTest, TestIt3, "System", "Object", sizeof(Il2CppObject)) {
     // These fields are initialized in the DEFAULT_CTOR
-    public:
+   public:
     std::vector<void*> allocField;
     int x = 3;
     DECLARE_DEFAULT_CTOR();
@@ -167,33 +165,6 @@ DECLARE_CLASS(SmallTest, TestIt3, "System", "Object", sizeof(Il2CppObject)) {
 };
 
 DEFINE_TYPE(SmallTest, TestIt3);
-
-// DECLARE_CLASS_INTERFACES(Il2CppNamespace, MyBeatmapObjectManager, "", "BeatmapObjectManager", INTERFACE_NAME("", "IBeatmapObjectSpawner")) {
-//     DECLARE_CTOR(ctor);
-//     DECLARE_OVERRIDE_METHOD(void, SpawnBasicNote, il2cpp_utils::FindMethodUnsafe("", "IBeatmapObjectSpawner", "SpawnBasicNote", 11),
-//     NoteData* noteData, Vector3 moveStartPos, Vector3 moveEndPos, Vector3 jumpEndPos, float moveDuration, float jumpDuration, float jumpGravity, float rotation, bool disappearingArrow, bool
-//     ghostNote, float cutDirectionAngleOffset); REGISTER_FUNCTION(MyBeatmapObjectManager,
-//         logger.debug("Registering MyBeatmapObjectManager!");
-//         REGISTER_METHOD(ctor);
-//         REGISTER_METHOD(SpawnBasicNote);
-//     )
-//     public:
-//     static inline Il2CppObject* actualBeatmapObjectManager;
-//     static inline void setActual(Il2CppObject* beatmapObjectManager) {
-//         actualBeatmapObjectManager = actualBeatmapObjectManager;
-//     }
-// };
-
-// void Il2CppNamespace::MyBeatmapObjectManager::ctor() {
-//     logger.debug("Called Il2CppNamespace::MyBeatmapObjectManager::ctor");
-// }
-
-// void Il2CppNamespace::MyBeatmapObjectManager::SpawnBasicNote(NoteData* noteData, Vector3 moveStartPos, Vector3 moveEndPos, Vector3 jumpEndPos, float moveDuration, float jumpDuration, float
-// jumpGravity, float rotation, bool disappearingArrow, bool ghostNote, float cutDirectionAngleOffset) {
-//     logger.debug("Called Il2CppNamespace::MyBeatmapObjectManager::SpawnBasicNote, calling orig now!");
-//     auto* method = il2cpp_utils::FindMethodUnsafe("", "BeatmapObjectManager", "SpawnBasicNote", 11);
-//     il2cpp_utils::RunMethod(actualBeatmapObjectManager, method, noteData, moveStartPos, moveEndPos, jumpEndPos, moveDuration, jumpDuration, jumpGravity, rotation);
-// }
 
 static custom_types::ClassWrapper* klassWrapper;
 
@@ -205,63 +176,44 @@ CUSTOM_TYPES_FUNC void setup(CModInfo* info) {
     logger.debug("Completed setup!");
 }
 
-MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(MainMenuViewController_DidActivate, "", "MainMenuViewController", "DidActivate", void, Il2CppObject* self, bool firstActivation, bool addedToHierarchy,
-                                     bool screenSystemEnabling) {
+MAKE_HOOK(
+    MainMenuViewController_DidActivate,
+    ({"", "MainMenuViewController"}, "DidActivate"),
+    void,
+    Il2CppObject* self,
+    bool firstActivation,
+    bool addedToHierarchy,
+    bool screenSystemEnabling
+) {
     logger.debug("MainMenuViewController.DidActivate!");
     MainMenuViewController_DidActivate(self, firstActivation, addedToHierarchy, screenSystemEnabling);
 
     logger.debug("Creating random...");
     auto* rand = Il2CppNamespace::MyCustomRandom::New_ctor(1.23456789);
     logger.debug("Created random: {}", fmt::ptr(rand));
-    custom_types::logAll(classof(Il2CppNamespace::MyCustomRandom*));
-    auto* method = RET_V_UNLESS(logger, il2cpp_utils::ResolveVtableSlot(::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_class<Il2CppNamespace::MyCustomRandom*>::get(),
-                                                                                    il2cpp_utils::GetClassFromName("", "IRandom"), 0));
+    custom_types::logAll(i2c::class_of<Il2CppNamespace::MyCustomRandom*>());
+    auto* method = RET_V_UNLESS(logger, i2c::find_method(i2c::class_of<Il2CppNamespace::MyCustomRandom*>(), {{"", "IRandom"}, 0}));
     logger.debug("Found IRandom.Sample MethodInfo at {}", fmt::ptr(method));
-    auto num = RET_V_UNLESS(logger, il2cpp_utils::RunMethod<double>(rand, method).into_optional_result());
+    auto num = RET_V_UNLESS(logger, i2c::run_method<i2c::result<double>>(rand, method));
     logger.debug("Sample method returned {}", num);
 
     logger.debug("Getting GO...");
-    auto* go = RET_V_UNLESS(logger, il2cpp_utils::GetPropertyValue(self, "gameObject").into_optional_result().value_or(nullptr));
+    auto* go = RET_V_UNLESS(logger, i2c::get_property<i2c::result<Il2CppObject*>>(self, "gameObject"));
     logger.debug("Got GO: {}", fmt::ptr(go));
-    custom_types::logAll(classof(Il2CppNamespace::MyType*));
-    custom_types::logAll(classof(Il2CppNamespace::MyType*)->parent);
-    auto* customType = il2cpp_utils::GetSystemType(custom_types::Register::classes[0]);
+    custom_types::logAll(i2c::class_of<Il2CppNamespace::MyType*>());
+    custom_types::logAll(i2c::class_of<Il2CppNamespace::MyType*>()->parent);
+    auto* customType = i2c::get_system_type(custom_types::Register::classes[0]);
     logger.debug("Custom System.Type: {}", fmt::ptr(customType));
-    auto strType = RET_V_UNLESS(logger, il2cpp_utils::RunMethodOpt<StringW>(customType, "ToString"));
+    auto strType = RET_V_UNLESS(logger, i2c::run_method<i2c::result<StringW>>(customType, "ToString"));
     logger.debug("ToString: {}", strType);
-    auto name = RET_V_UNLESS(logger, il2cpp_utils::GetPropertyValue<StringW>(customType, "Name").into_optional_result());
+    auto name = RET_V_UNLESS(logger, i2c::get_property<i2c::result<StringW>>(customType, "Name"));
     logger.debug("Name: {}", name);
     logger.debug("Actual type: {}", fmt::ptr(&custom_types::Register::classes[0]->byval_arg));
     logger.debug("Type: {}", fmt::ptr(customType->type));
     // crashNow = true;
-    auto* comp = RET_V_UNLESS(logger, il2cpp_utils::RunMethodOpt<Il2CppObject*>(go, "AddComponent", customType));
+    auto* comp = RET_V_UNLESS(logger, i2c::run_method<i2c::result<Il2CppObject*>>(go, "AddComponent", customType));
     logger.debug("Custom Type added as a component: {}", fmt::ptr(comp));
 }
-
-// static bool first = false;
-// MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapObjectSpawnController_SpawnNote, void, Il2CppObject* self, Il2CppObject* noteData, float cutDirAngle) {
-//     if (!first) {
-//         first = true;
-//         // We log, set the interface field, log, and then call orig.
-//         logger.debug("Calling BeatmapObjectSpawnController.SpawnNote!");
-//         auto* created = CRASH_UNLESS(il2cpp_utils::New<Il2CppNamespace::MyBeatmapObjectManager*>("Il2CppNamespace", "MyBeatmapObjectManager"));
-//         logger.debug("Created MyBeatmapObjectManager: {}!", fmt::ptr(created));
-//         auto* old = CRASH_UNLESS(il2cpp_utils::GetFieldValue(self, "_beatmapObjectSpawner"));
-//         logger.debug("Got old: {}!", fmt::ptr(old));
-//         Il2CppNamespace::MyBeatmapObjectManager::setActual(old);
-//         logger.debug("Set actual to old!");
-//         il2cpp_utils::SetFieldValue(self, "_beatmapObjectSpawner", created);
-//         logger.debug("Set current to MyBeatmapObjectManager: {}!", fmt::ptr(created));
-//         // Call orig
-//         BeatmapObjectSpawnController_SpawnNote(self, noteData, cutDirAngle);
-//         logger.debug("Called orig!");
-//         il2cpp_utils::SetFieldValue(self, "_beatmapObjectSpawner", old);
-//         // Then, we set the field back.
-//         logger.debug("Set field back to old: {}", fmt::ptr(old));
-//     } else {
-//         BeatmapObjectSpawnController_SpawnNote(self, noteData, cutDirAngle);
-//     }
-// }
 
 CUSTOM_TYPES_FUNC void load() {
     static constexpr auto& logger = custom_types::logger;
@@ -269,29 +221,15 @@ CUSTOM_TYPES_FUNC void load() {
     custom_types::Register::AutoRegister();
     logger.debug("Registered: {} types!", custom_types::Register::classes.size());
     INSTALL_HOOK(logger, MainMenuViewController_DidActivate);
-    // auto k = CRASH_UNLESS(custom_types::Register::RegisterType<Il2CppNamespace::MyBeatmapObjectManager>());
-    // INSTALL_HOOK_OFFSETLESS(BeatmapObjectSpawnController_SpawnNote, il2cpp_utils::FindMethodUnsafe("", "BeatmapObjectSpawnController", "SpawnNote", 2));
-    // il2cpp_utils::LogClass(il2cpp_utils::GetClassFromName("Il2CppNamespace", "MyBeatmapObjectManager"));
-    // logger.debug("Vtables for MyBeatmapObjectManager: {}", k->get()->vtable_count);
     logger.debug("Custom types size: {}", custom_types::Register::classes.size());
     logger.debug("Logging vtables for custom type! There are: {} vtables", custom_types::Register::classes[0]->vtable_count);
-    il2cpp_utils::LogClass(logger, custom_types::Register::classes[0]);
-    il2cpp_utils::LogClass(logger, custom_types::Register::classes[1]);
-    il2cpp_utils::New<SmallTest::TestIt2*>();
-    auto* testIt3 = CRASH_UNLESS(il2cpp_utils::New<SmallTest::TestIt3*>());
+    i2c::log_class(logger, custom_types::Register::classes[0]);
+    i2c::log_class(logger, custom_types::Register::classes[1]);
+    i2c::new_ctor<SmallTest::TestIt2*>();
+    auto* testIt3 = i2c::new_ctor<SmallTest::TestIt3*>();
     logger.debug("testIt3 default value {}", testIt3->x);
     for (auto itr : custom_types::Register::classes) {
-        logger.debug("Image for custom type: {}::{} {}", itr->namespaze, itr->name, fmt::ptr(itr->image) );
+        logger.debug("Image for custom type: {}::{} {}", itr->namespaze, itr->name, fmt::ptr(itr->image));
     }
-    // custom_types::logImage(custom_types::Register::classes[0]->image);
-    // for (int i = 0; i < k->get()->vtable_count; i++) {
-    //     custom_types::logVtable(&k->get()->vtable[i]);
-    // }
-
-    // logger.debug("Vtables for parent: {}", k->get()->parent->vtable_count);
-    // for (int i = 0; i < k->get()->parent->vtable_count; i++) {
-    //     custom_types::logVtable(&k->get()->parent->vtable[i]);
-    // }
-    // custom_types::logMethod(il2cpp_utils::FindMethodUnsafe("", "IBeatmapObjectSpawner", "SpawnBasicNote", 11));
 }
 #endif

@@ -1,14 +1,16 @@
 #pragma once
-#include "types.hpp"
-#include "register.hpp"
-#include <stdint.h>
-#include <stddef.h>
-#include <new>
-#include <utility>
+
+#include "_config.h"
 #include "macro-types.hpp"
+#include "register.hpp"
+#include "types.hpp"
 #include "util.hpp"
-#include "beatsaber-hook/shared/utils/utils.h"
-#include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
+#include "beatsaber-hook/shared/members.hpp"
+#include "beatsaber-hook/shared/types.hpp"
+#include "beatsaber-hook/shared/utils.hpp"
+
+#include <stddef.h>
+#include <stdint.h>
 
 // Explicit macros defined here are laid out all here, ctrl-f for a specific name to find its impls.
 
@@ -44,6 +46,10 @@
 #error "DECLARE_VALUE_CODEGEN is already defined! Undefine it before including macros.hpp!"
 #endif
 
+#ifdef ___DECLARE_TYPE_WRAPPER_INTERNALS
+#error "___DECLARE_TYPE_WRAPPER_INTERNALS is already defined! Undefine it before including macros.hpp!"
+#endif
+
 #ifdef ___DECLARE_TYPE_WRAPPER
 #error "___DECLARE_TYPE_WRAPPER is already defined! Undefine it before including macros.hpp!"
 #endif
@@ -53,19 +59,14 @@
 #endif
 
 #ifndef INTERFACE_NAME
-#define INTERFACE_NAME(namespaze_, name_) ::custom_types::interface_helper<namespaze_, name_>
+#define INTERFACE_NAME(namespaze_, name_) ::i2c::const_type<namespaze_, name_>
 #endif
 
-#ifndef CUSTOM_TYPES_EXPORT_VISIBILITY
-#define CUSTOM_TYPES_EXPORT_VISIBILITY __attribute__((visibility("default")))
-#endif
-
-// Helper macro for declaring classes with and without interfaces
-#define ___DECLARE_TYPE_WRAPPER(namespaze_, name_, typeEnum_, baseNamespaze, baseName, baseSize, dllName_, flags_, ...) \
+#define ___DECLARE_TYPE_WRAPPER_INTERNALS(namespaze_, name_, typeEnum_, dllName_, flags_, baseKlass, baseCustom, ...) \
 namespace namespaze_ { \
     class name_; \
     namespace __custom_types_internal { \
-        struct CUSTOM_TYPES_EXPORT_VISIBILITY ___TypeRegistration_##name_ : ::custom_types::TypeRegistration { \
+        struct CUSTOM_TYPES_EXPORT ___TypeRegistration_##name_ : ::custom_types::TypeRegistration { \
             ___TypeRegistration_##name_() { \
                 ::custom_types::Register::AddType(this); \
                 instance = this; \
@@ -117,113 +118,7 @@ namespace namespaze_ { \
                 return dllName_; \
             } \
             Il2CppClass* baseType() const override { \
-                return ::il2cpp_utils::GetClassFromName(baseNamespaze, baseName); \
-            } \
-            std::vector<Il2CppClass*> const interfaces() const override { \
-                return ::custom_types::ExtractClasses<__VA_ARGS__>(); \
-            } \
-            constexpr Il2CppTypeEnum typeEnum() const override { \
-                return typeEnum_; \
-            } \
-            constexpr uint32_t typeFlags() const override { \
-                return flags_; \
-            } \
-            static Il2CppClass* klass_ptr; \
-            Il2CppClass*& klass() const override { \
-                return klass_ptr; \
-            } \
-            size_t size() const override; \
-            TypeRegistration* customBase() const override { \
-                return nullptr; \
-            } \
-            bool initialized() const override { \
-                return init; \
-            } \
-            void setInitialized() const override { \
-                init = true; \
-            } \
-            static bool init; \
-            static TypeRegistration* instance; \
-            static TypeRegistration* get() { \
-                return instance; \
-            } \
-        }; \
-    } \
-} \
-template<> \
-struct ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_class<namespaze_::name_*> { \
-    static inline Il2CppClass* get() { \
-        return namespaze_::__custom_types_internal::___TypeRegistration_##name_::klass_ptr; \
-    } \
-}; \
-template<> \
-struct ::il2cpp_utils::il2cpp_type_check::need_box<namespaze_::name_> { \
-    constexpr static bool value = false; \
-}; \
-MARK_REF_PTR_T(namespaze_::name_); \
-class CUSTOM_TYPES_EXPORT_VISIBILITY namespaze_::name_ : \
-    public ::custom_types::TypeWrapperParent<namespaze_::name_, namespaze_::__custom_types_internal::___TypeRegistration_##name_, typeEnum_, baseSize>
-
-// Helper for declaring classes with and without interfaces with explicit inheritance
-#define ___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze_, name_, typeEnum_, baseT, dllName_, flags_, baseCustom, ...) \
-namespace namespaze_ { \
-    class name_; \
-    namespace __custom_types_internal { \
-        struct CUSTOM_TYPES_EXPORT_VISIBILITY ___TypeRegistration_##name_ : ::custom_types::TypeRegistration { \
-            ___TypeRegistration_##name_() { \
-                ::custom_types::Register::AddType(this); \
-                instance = this; \
-            } \
-            static inline std::vector<::custom_types::FieldRegistrator*> fields; \
-            std::vector<::custom_types::FieldRegistrator*> const getFields() const override { \
-                return fields; \
-            } \
-            static void addField(::custom_types::FieldRegistrator* inst) { \
-                fields.push_back(inst); \
-                ::custom_types::logger.debug("Adding instance field: {}.{} new size: {}", #name_, inst->name(), fields.size()); \
-            } \
-            static inline std::vector<::custom_types::StaticFieldRegistrator*> staticFields; \
-            std::vector<::custom_types::StaticFieldRegistrator*> const getStaticFields() const override { \
-                return staticFields; \
-            } \
-            static void addStaticFieldInstance(::custom_types::StaticFieldRegistrator* inst) { \
-                staticFields.push_back(inst); \
-                ::custom_types::logger.debug("Adding static field: {}.{} new size: {}", #name_, inst->name(), staticFields.size()); \
-            } \
-            static inline std::vector<::custom_types::MethodRegistrator*> methods; \
-            std::vector<::custom_types::MethodRegistrator*> const getMethods() const override { \
-                return methods; \
-            } \
-            static void addMethod(::custom_types::MethodRegistrator* inst) { \
-                methods.push_back(inst); \
-                ::custom_types::logger.debug("Adding method: {}.{} new size: {}", #name_, inst->name(), methods.size()); \
-            } \
-            static inline size_t staticFieldOffset; \
-            static size_t addStaticField(size_t sz) { \
-                auto tmp = staticFieldOffset; \
-                staticFieldOffset += sz; \
-                return tmp; \
-            } \
-            static char* st_fields; \
-            char*& static_fields() override { \
-                return st_fields; \
-            } \
-            size_t static_fields_size() const override { \
-                return staticFieldOffset; \
-            } \
-            constexpr const char* name() const override { \
-                return #name_; \
-            } \
-            constexpr const char* namespaze() const override { \
-                return #namespaze_; \
-            } \
-            constexpr const char* dllName() const override { \
-                return dllName_; \
-            } \
-            Il2CppClass* baseType() const override { \
-                auto klass = ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_class<baseT*>::get(); \
-                if (!klass->initialized) il2cpp_functions::Class_Init(klass); \
-                return klass; \
+                return baseKlass; \
             } \
             std::vector<Il2CppClass*> const interfaces() const override { \
                 return ::custom_types::ExtractClasses<__VA_ARGS__>(); \
@@ -257,17 +152,23 @@ namespace namespaze_ { \
     } \
 } \
 template<> \
-struct ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_class<namespaze_::name_*> { \
+struct ::i2c::type_check::no_arg_class<namespaze_::name_*> { \
     static inline Il2CppClass* get() { \
         return namespaze_::__custom_types_internal::___TypeRegistration_##name_::klass_ptr; \
     } \
 }; \
-template<> \
-struct ::il2cpp_utils::il2cpp_type_check::need_box<namespaze_::name_> { \
-    constexpr static bool value = false; \
-}; \
-MARK_REF_PTR_T(namespaze_::name_); \
-class CUSTOM_TYPES_EXPORT_VISIBILITY namespaze_::name_ : \
+MARK_REF_T(namespaze_::name_*);
+
+// Helper macro for declaring classes with and without interfaces
+#define ___DECLARE_TYPE_WRAPPER(namespaze_, name_, typeEnum_, baseNamespaze, baseName, baseSize, dllName_, flags_, ...) \
+___DECLARE_TYPE_WRAPPER_INTERNALS(namespaze_, name_, typeEnum_, dllName_, flags_, ::i2c::get_class_from_name(baseNamespaze, baseName), nullptr, __VA_ARGS__) \
+class CUSTOM_TYPES_EXPORT namespaze_::name_ : \
+    public ::custom_types::TypeWrapperParent<namespaze_::name_, namespaze_::__custom_types_internal::___TypeRegistration_##name_, typeEnum_, baseSize>
+
+// Helper for declaring classes with and without interfaces with explicit inheritance
+#define ___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze_, name_, typeEnum_, baseT, dllName_, flags_, baseCustom, ...) \
+___DECLARE_TYPE_WRAPPER_INTERNALS(namespaze_, name_, typeEnum_, dllName_, flags_, ::custom_types::inited_class_of<baseT*>(), baseCustom, __VA_ARGS__) \
+class CUSTOM_TYPES_EXPORT namespaze_::name_ : \
     public ::custom_types::TypeWrapperInheritanceParent<namespaze_::name_, namespaze_::__custom_types_internal::___TypeRegistration_##name_, typeEnum_, baseT>
 
 // Declares a class with the given namespace, name, base namespace, base name, and baseSize.
@@ -378,11 +279,11 @@ ___DECLARE_TYPE_WRAPPER_INHERITANCE(namespaze, name, Il2CppTypeEnum::IL2CPP_TYPE
 
 #define DEFINE_TYPE(namespaze, name) \
 ::custom_types::TypeRegistration* namespaze::name::___TypeRegistration::instance; \
-static namespaze::name::___TypeRegistration __registration_instance_##name; \
+static namespaze::name::___TypeRegistration CONCAT(__registration_instance_##name##_, __LINE__); \
 char* namespaze::name::___TypeRegistration::st_fields; \
 Il2CppClass* namespaze::name::___TypeRegistration::klass_ptr; \
 bool namespaze::name::___TypeRegistration::init = false; \
-size_t namespaze::name::___TypeRegistration::size() const { return sizeof(namespaze::name); };
+size_t namespaze::name::___TypeRegistration::size() const { return sizeof(namespaze::name); }
 
 // TODO: Add a way of declaring abstract/interface types.
 // This requires messing with method slots even more than I do right now.
@@ -423,10 +324,8 @@ struct ___FieldRegistrator_##name_ : ::custom_types::FieldRegistrator { \
         return #name_; \
     } \
     const Il2CppType* type() const override { \
-        ::il2cpp_functions::Init(); \
-        auto klass = ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_class<type_>::get();\
-        if (!klass->initialized) il2cpp_functions::Class_Init(klass);\
-        return ::il2cpp_functions::class_get_type(klass); \
+        auto klass = ::custom_types::inited_class_of<type_>(); \
+        return ::i2c::functions::class_get_type(klass); \
     } \
     constexpr uint16_t fieldAttributes() const override { \
         return flags_; \
@@ -453,14 +352,14 @@ static inline ___FieldRegistrator_##name_ ___##name_##_FieldRegistrator
 
 #define DEFINE_INSTANCE_FIELD_ACCESSORS(type_, name_, visibility_) \
 protected: \
-static inline custom_types::field_accessor<type_> ___##name_##_FieldAccessor; \
+static inline ::custom_types::field_accessor<type_> ___##name_##_FieldAccessor; \
 visibility_: \
 inline type_& __get_##name_() CT_FIELD_GET_EXCEPT { \
-    CT_FIELD_ACCESS_CHECK(this); \
+    if (!static_cast<const void*>(this)) throw ::custom_types::NullAccessException(); \
     return ___##name_##_FieldAccessor.read(this, ___##name_##_FieldRegistrator.offset()); \
 } \
 inline type_ const& __get_##name_() const CT_FIELD_GET_EXCEPT { \
-    CT_FIELD_ACCESS_CHECK(this); \
+    if (!static_cast<const void*>(this)) throw ::custom_types::NullAccessException(); \
     return ___##name_##_FieldAccessor.read(this, ___##name_##_FieldRegistrator.offset());  \
 } \
 inline void __set_##name_(type_ v) { ___##name_##_FieldAccessor.write(this, ___##name_##_FieldRegistrator.offset(), std::forward<type_>(v)); }
@@ -543,8 +442,7 @@ struct ___StaticFieldRegistrator_##name_ : ::custom_types::StaticFieldRegistrato
         return #name_; \
     } \
     const Il2CppType* type() const override { \
-        ::il2cpp_functions::Init(); \
-        return ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<type_>::get(); \
+        return ::i2c::type_of<type_>(); \
     } \
     constexpr uint16_t fieldAttributes() const override { \
         return FIELD_ATTRIBUTE_PUBLIC | FIELD_ATTRIBUTE_STATIC; \
@@ -561,7 +459,7 @@ public: \
 static type_& name_() { \
     CRASH_UNLESS(___TargetType::___TypeRegistration::st_fields); \
     return *reinterpret_cast<type_*>(&___TargetType::___TypeRegistration::st_fields[___##name_##_StaticFieldRegistrator.offset()]); \
-} \
+}
 
 #ifdef ___CREATE_INSTANCE_METHOD
 #error "___CREATE_INSTANCE_METHOD is already defined! Undefine it before including macros.hpp!"
@@ -589,13 +487,12 @@ struct ___MethodRegistrator_##name_<R (T::*)(TArgs...)> : ::custom_types::Method
         return virtualData; \
     } \
     const Il2CppType* returnType() const override { \
-        il2cpp_functions::Init(); \
-        return ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<R>::get(); \
+        ::i2c::functions::initialize(); \
+        return ::i2c::type_of<R>(); \
     } \
     std::vector<const Il2CppType*> params() const override { \
         int32_t counter = 0; \
-        il2cpp_functions::Init(); \
-        return {(::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<TArgs>::get())...}; \
+        return {::i2c::type_of<TArgs>()...}; \
     } \
     uint8_t params_size() const override { \
         return sizeof...(TArgs); \
@@ -626,16 +523,17 @@ ___CREATE_INSTANCE_METHOD(name, specialName, flags | METHOD_ATTRIBUTE_PUBLIC | M
 #define DECLARE_CTOR(name, ...) \
 public: \
 void name(__VA_ARGS__); \
-template<::il2cpp_utils::CreationType creationType = ::il2cpp_utils::CreationType::Temporary, class... TArgs> \
-static ___TargetType* New_ctor(TArgs&&... args) { \
-    static_assert(::custom_types::Decomposer<decltype(&___TargetType::name)>::convertible<TArgs...>(), "Arguments provided to New_ctor must be convertible to the constructor!"); \
+template <bool Manual = false> \
+static ___TargetType* New_ctor(auto&&... args) { \
+    static_assert(::custom_types::Decomposer<decltype(&___TargetType::name)>::convertible<decltype(args)...>(), "Arguments provided to New_ctor must be convertible to the constructor!"); \
     ___TargetType* obj; \
-    if constexpr (creationType == ::il2cpp_utils::CreationType::Temporary) { \
-        obj = reinterpret_cast<___TargetType*>(::il2cpp_functions::object_new(___TypeRegistration::klass_ptr)); \
+    if constexpr (Manual) { \
+        obj = reinterpret_cast<___TargetType*>(::i2c::create_manual(___TypeRegistration::klass_ptr)); \
     } else { \
-        obj = reinterpret_cast<___TargetType*>(::il2cpp_utils::createManual(___TypeRegistration::klass_ptr)); \
+        ::i2c::functions::initialize(); \
+        obj = reinterpret_cast<___TargetType*>(::i2c::functions::object_new(___TypeRegistration::klass_ptr)); \
     } \
-    obj->name(std::forward<TArgs>(args)...); \
+    obj->name(std::forward<decltype(args)>(args)...); \
     return obj; \
 } \
 ___CREATE_INSTANCE_METHOD(name, ".ctor", METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG | METHOD_ATTRIBUTE_SPECIAL_NAME | METHOD_ATTRIBUTE_RT_SPECIAL_NAME, nullptr)
@@ -665,7 +563,7 @@ ___CREATE_INSTANCE_METHOD(name, #name, (overridingMethodInfo->flags & ~METHOD_AT
 // Declare an overriding method with: return type, name, method it is implementing, parameters...
 // This macro matches the DECLARE_OVERRIDE_METHOD macro except it matches the method you pass in with the il2cpp type check.
 #define DECLARE_OVERRIDE_METHOD_MATCH(ret, name, overridingMethod, ...) \
-DECLARE_OVERRIDE_METHOD(ret, name, il2cpp_utils::il2cpp_type_check::MetadataGetter<overridingMethod>::methodInfo() __VA_OPT__(, __VA_ARGS__))
+DECLARE_OVERRIDE_METHOD(ret, name, ::i2c::metadata_getter<overridingMethod>::method_info() __VA_OPT__(, __VA_ARGS__))
 
 #ifdef DECLARE_DTOR
 #error "DECLARE_DTOR is already defined! Undefine it before including macros.hpp!"
@@ -675,7 +573,7 @@ DECLARE_OVERRIDE_METHOD(ret, name, il2cpp_utils::il2cpp_type_check::MetadataGett
 #define DECLARE_DTOR(name) \
 public: \
 void name(); \
-___CREATE_INSTANCE_METHOD(name, #name, METHOD_ATTRIBUTE_VIRTUAL | METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG, ::il2cpp_utils::FindMethod("System", "Object", "Finalize"))
+___CREATE_INSTANCE_METHOD(name, #name, METHOD_ATTRIBUTE_VIRTUAL | METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG, ::i2c::find_method({"System", "Object"}, "Finalize"))
 
 #ifdef DECLARE_SIMPLE_DTOR
 #error "DECLARE_SIMPLE_DTOR is already defined! Undefine it before including macros.hpp!"
@@ -687,7 +585,7 @@ ___CREATE_INSTANCE_METHOD(name, #name, METHOD_ATTRIBUTE_VIRTUAL | METHOD_ATTRIBU
 void __Finalize() { \
     this->~___TargetType(); \
 } \
-___CREATE_INSTANCE_METHOD(__Finalize, "__Finalize", (::il2cpp_utils::FindMethod("System", "Object", "Finalize")->flags & ~METHOD_ATTRIBUTE_ABSTRACT) | METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG, ::il2cpp_utils::FindMethod("System", "Object", "Finalize"))
+___CREATE_INSTANCE_METHOD(__Finalize, "__Finalize", (::i2c::find_method({"System", "Object"}, "Finalize")->flags & ~METHOD_ATTRIBUTE_ABSTRACT) | METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG, ::i2c::find_method({"System", "Object"}, "Finalize"))
 
 #ifdef INVOKE_CTOR
 #error "INVOKE_CTOR is already defined! Undefine it before including macros.hpp!"
@@ -730,10 +628,10 @@ void __ctor() { \
     INVOKE_CTOR(); \
     INVOKE_BASE_CTOR(___TargetType::___TypeRegistration::get()->baseType()); \
 } \
-template<::il2cpp_utils::CreationType creationType = ::il2cpp_utils::CreationType::Temporary, class... TArgs> \
-static ___TargetType* New_ctor(TArgs&&... args) { \
-    static_assert(::custom_types::Decomposer<decltype(&___TargetType::__ctor)>::convertible<TArgs...>(), "Arguments provided to New_ctor must be convertible to the constructor!"); \
-    return THROW_UNLESS(il2cpp_utils::New<___TargetType*, creationType>(___TypeRegistration::klass_ptr, std::forward<TArgs>(args)...)); \
+template<bool Manual = false> \
+static ___TargetType* New_ctor(auto&&... args) { \
+    static_assert(::custom_types::Decomposer<decltype(&___TargetType::__ctor)>::convertible<decltype(args)...>(), "Arguments provided to New_ctor must be convertible to the constructor!"); \
+    return ::i2c::new_ctor<___TargetType*, Manual>(std::forward<decltype(args)>(args)...); \
 } \
 ___CREATE_INSTANCE_METHOD(__ctor, ".ctor", METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG | METHOD_ATTRIBUTE_SPECIAL_NAME | METHOD_ATTRIBUTE_RT_SPECIAL_NAME, nullptr)
 
@@ -763,13 +661,13 @@ struct ___MethodRegistrator_##name_<R (*)(TArgs...)> : ::custom_types::MethodReg
         return nullptr; \
     } \
     const Il2CppType* returnType() const override { \
-        il2cpp_functions::Init(); \
-        return ::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<R>::get(); \
+        ::i2c::functions::initialize(); \
+        return ::i2c::type_of<R>(); \
     } \
     std::vector<const Il2CppType*> params() const override { \
         int32_t counter = 0; \
-        il2cpp_functions::Init(); \
-        return {(::il2cpp_utils::il2cpp_type_check::il2cpp_no_arg_type<TArgs>::get())...}; \
+        ::i2c::functions::initialize(); \
+        return {::i2c::type_of<TArgs>()...}; \
     } \
     uint8_t params_size() const override { \
         return sizeof...(TArgs); \
@@ -792,12 +690,11 @@ public: \
 static ret name(__VA_ARGS__); \
 ___CREATE_STATIC_METHOD(name, #name, METHOD_ATTRIBUTE_PUBLIC | METHOD_ATTRIBUTE_HIDE_BY_SIG | METHOD_ATTRIBUTE_STATIC)
 
-
 namespace custom_types {
-    template<class T, class... TArgs>
+    template <class T, class... TArgs>
     void InvokeBaseCtor(Il2CppClass* klass, T* self, TArgs&&... args) {
-        static auto m = ::il2cpp_utils::FindMethod(klass, ".ctor", std::array<Il2CppType const*, sizeof...(TArgs)>{::il2cpp_utils::ExtractIndependentType<TArgs>()...});
-        ::il2cpp_utils::RunMethodRethrow(self, m, args...);
+        static auto m = ::i2c::find_method(klass, {".ctor", {}, {::i2c::type_of<TArgs>()...}});
+        ::i2c::run_method(self, m, args...);
     }
 }
 
