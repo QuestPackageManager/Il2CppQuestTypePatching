@@ -11,8 +11,9 @@
 
 #ifdef CT_USE_GCDESCRIPTOR_DEBUG
 #include "capstone-helpers.hpp"
-#include "utils/dynamic_array.h"
-#include "vm/MemoryInformation.h"
+#include "liveness-state-tracker.hpp"
+
+#include <atomic>
 #endif
 
 bool disableLivenessChecks() {
@@ -231,48 +232,16 @@ std::string generics(Il2CppClass* const klass) {
 #define GET_CLASS(obj) ((Il2CppClass*)(((size_t)(obj)->klass) & ~(size_t)1))
 #define IS_MARKED(obj) (((size_t)(obj)->klass) & (size_t)1)
 
-std::size_t generic_obj_traverse_count = 0;
-std::size_t obj_traverse_count = 0;
+std::atomic_size_t generic_obj_traverse_count = 0;
+std::atomic_size_t obj_traverse_count = 0;
 
 MAKE_HOOK(LivenessState_TraverseGenericObject, (nullptr), void, Il2CppObject* obj, void* state) {
     if (disableLivenessChecks()) {
         // If we are disabling liveness checks, do not call the original function.
         return LivenessState_TraverseGenericObject(obj, state);
     }
-    // We are calling this with an object and a state.
-    // The state is the LivenessState instance
-    // There is a process_array that we want to look at
-    // Likewise we also want to look at our traverse_depth
-    // Not to mention the actual object and state ptrs
-
-    // auto klass = GET_CLASS(obj);
-    // custom_types::logger.debug("{}:
-    // LivenessState::TraverseGenericObject({}, {}), with klass: {} ({}::{})",
-    // generic_obj_traverse_count++, fmt::ptr(obj), fmt::ptr(state), fmt::ptr(obj->klass), namespaze(klass),
-    // namek(klass)); process_array is at 0x18 (custom_growable_array*)
-    // traverse_depth is at 0x48 (int)
-    // auto arrPtr =
-    // *reinterpret_cast<il2cpp::utils::dynamic_array<Il2CppObject*>**>(reinterpret_cast<uint8_t*>(state)
-    // + 0x18); custom_types::logger.debug("traverse_depth: {}",
-    // *reinterpret_cast<int*>(reinterpret_cast<uint8_t*>(state) + 0x48));
-    // custom_types::logger.debug("arrPtr: {}, inner: {}, size: {}", fmt::ptr(arrPtr),
-    // fmt::ptr(arrPtr->data()), arrPtr->size()); custom_types::logger.flush(); for
-    // (size_t i = 0; i < arrPtr->size(); i++) { 	auto inst = arrPtr->data()[i];
-    // 	custom_types::logger.debug("arr val: {} ptr: {}, class: {}
-    // ({}::{})", i, fmt::ptr(inst), fmt::ptr(inst->klass), namespaze(GET_CLASS(inst)),
-    // namek(GET_CLASS(inst)));
-    // }
-    // if (arrPtr->size() > 0) {
-    // 	auto inst = arrPtr->data()[arrPtr->size() - 1];
-    // 	custom_types::logger.debug("arr val: {}, ptr: {}, class: {}
-    // ({}::{})", arrPtr->size() - 1, fmt::ptr(inst), fmt::ptr(inst->klass),
-    // namespaze(GET_CLASS(inst)), namek(GET_CLASS(inst)));
-    // 	custom_types::logger.flush();
-    // }
-    generic_obj_traverse_count++;
+    generic_obj_traverse_count.fetch_add(1, std::memory_order_relaxed);
     LivenessState_TraverseGenericObject(obj, state);
-    // custom_types::logger.debug("Complete
-    // LivenessState::TraverseGenericObject");
 }
 
 MAKE_HOOK(LivenessState_TraverseObjectInternal, (nullptr), bool, Il2CppObject* obj, bool isStruct, Il2CppClass* klass, void* state) {
@@ -280,34 +249,63 @@ MAKE_HOOK(LivenessState_TraverseObjectInternal, (nullptr), bool, Il2CppObject* o
         // If we are disabling liveness checks, do not call the original function.
         return LivenessState_TraverseObjectInternal(obj, isStruct, klass, state);
     }
-    // Here we are going to log... AGAIN
-    // but this time only a few things
-    // custom_types::logger.debug("LivenessState::TraverseObjectInternal({},
-    // {}, {}, {})", fmt::ptr(obj), isStruct, fmt::ptr(klass), fmt::ptr(state));
-    // custom_types::logger.flush();
-    // custom_types::logger.debug("class: ({}::{})", namespaze(klass),
-    // namek(klass)); custom_types::logger.flush();
-    obj_traverse_count++;
-    auto ret = LivenessState_TraverseObjectInternal(obj, isStruct, klass, state);
-    // custom_types::logger.debug("Complete
-    // LivenessState::TraverseObjectInternal");
-    return ret;
+    obj_traverse_count.fetch_add(1, std::memory_order_relaxed);
+    return LivenessState_TraverseObjectInternal(obj, isStruct, klass, state);
 }
 
-// MAKE_HOOK(Liveness_FromStatics, nullptr, void, void* state) {
-// 	// filter class is 0x10
-// 	auto filter =
-// *reinterpret_cast<Il2CppClass**>(reinterpret_cast<uint8_t*>(state) + 0x10);
-// 	custom_types::logger.debug("Liveness::FromStatics({})", fmt::ptr(state));
-// 	custom_types::logger.debug("filter class: {}", fmt::ptr(filter));
-// 	custom_types::logger.flush();
-// 	custom_types::logger.debug("filter class: {}::{}", namespaze(filter),
-// namek(filter)); 	custom_types::logger.flush();
-// 	// TODO: Log class statics info
-// 	Liveness_FromStatics(state);
-// 	custom_types::logger.debug("Complete Liveness::FromStatics");
-// }
+namespace {
 
+    constexpr std::size_t livenessStateCapacity = 32;
+    custom_types::liveness_debug::LivenessStateTracker<livenessStateCapacity> livenessStates;
+    std::atomic_flag loggedMissingLivenessState = ATOMIC_FLAG_INIT;
+
+    bool isRegisteredCustomClass(Il2CppClass const* klass) {
+        for (auto const* registeredClass : custom_types::Register::classes) {
+            if (registeredClass == klass)
+                return true;
+        }
+        return false;
+    }
+
+}  // namespace
+
+MAKE_HOOK(
+    UnityLivenessAllocateStruct,
+    nullptr,
+    void*,
+    Il2CppClass* filter,
+    int maxObjectCount,
+    il2cpp_register_object_callback callback,
+    void* userdata,
+    il2cpp_liveness_reallocate_callback reallocate
+) {
+    auto* state = UnityLivenessAllocateStruct(filter, maxObjectCount, callback, userdata, reallocate);
+    auto const result = livenessStates.track(state, filter);
+    if (result == custom_types::liveness_debug::TrackResult::tracked) {
+        custom_types::logger.debug(
+            "Captured liveness state {}, filter {} ({}::{}), max object count {}",
+            fmt::ptr(state),
+            fmt::ptr(filter),
+            filter ? namespaze(filter) : "<none>",
+            filter ? namek(filter) : "<none>",
+            maxObjectCount
+        );
+    } else if (result == custom_types::liveness_debug::TrackResult::full) {
+        custom_types::logger.warn(
+            "Liveness diagnostic state registry is full (capacity: {}); state {} will be forwarded without inspection",
+            livenessStateCapacity,
+            fmt::ptr(state)
+        );
+    } else if (result == custom_types::liveness_debug::TrackResult::alreadyTracked) {
+        custom_types::logger.warn("Liveness diagnostic received duplicate allocation for state {}", fmt::ptr(state));
+    }
+    return state;
+}
+
+MAKE_HOOK(UnityLivenessFreeStruct, nullptr, void, void* state) {
+    livenessStates.untrack(state);
+    UnityLivenessFreeStruct(state);
+}
 static inline bool HasParentUnsafe(Il2CppClass const* klass, Il2CppClass const* parent) {
     return klass->typeHierarchyDepth >= parent->typeHierarchyDepth && klass->typeHierarchy[parent->typeHierarchyDepth - 1] == parent;
 }
@@ -316,6 +314,18 @@ MAKE_HOOK(LivenessState_TraverseGCDescriptor, (nullptr), void, Il2CppObject* obj
     if (disableLivenessChecks()) {
         return LivenessState_TraverseGCDescriptor(obj, state);
     }
+
+    auto const trackedState = livenessStates.find(state);
+    if (!trackedState.found) {
+        if (!loggedMissingLivenessState.test_and_set(std::memory_order_relaxed)) {
+            custom_types::logger.warn(
+                "No public-API filter capture exists for liveness state {}; forwarding without inspecting private LivenessState memory",
+                fmt::ptr(state)
+            );
+        }
+        return LivenessState_TraverseGCDescriptor(obj, state);
+    }
+    auto* filterClass = static_cast<Il2CppClass*>(trackedState.filter);
 
     // Note: gc_desc is a bitfield that holds which fields of the type has
     // references, or, if it is too large, a pointer to a table which holds a
@@ -334,131 +344,70 @@ MAKE_HOOK(LivenessState_TraverseGCDescriptor, (nullptr), void, Il2CppObject* obj
                 // Null instances are permitted
                 continue;
             }
-            // We aren't marked at this point, val is a new pointer in our instance
-            // PreviewDifficultyBeatmapSet
-            // mask: 0b0011000...1
-            // f1: BeatmapCharacteristicSO (skipped explicitly in if above)
-            // f2: BeatmapDifficulty[] (crashes below)
-            // val is: pointer to BeatmapDifficulty[] (at least, it SHOULD be)
-            // specifically, val is a pointer to: 39D0 before obj
-            // Offset of filter class
-            auto filterClass = *reinterpret_cast<Il2CppClass**>(reinterpret_cast<uintptr_t>(state) + 0x10);
-            if (!val->klass || (GET_CLASS(val)->has_references == 0 && GET_CLASS(val)->klass != GET_CLASS(val) && GET_CLASS(val)->name == nullptr) ||
+
+            auto* const rawValueClass = val->klass;
+            auto* const valueClass = GET_CLASS(val);
+            char const* suspiciousReason = nullptr;
+            if (!rawValueClass) {
+                suspiciousReason = "referenced object has a null class pointer";
+            } else if (valueClass->has_references == 0 && valueClass->klass != valueClass && valueClass->name == nullptr) {
+                suspiciousReason = "referenced class metadata has an inconsistent shape";
+            } else if (
                 // If our filter class is not null, and
                 // our filter class' type hierarchy depth is <= ours and
                 // our type hierarchy pointer is garbage
                 (filterClass && filterClass->typeHierarchyDepth <= GET_CLASS(val)->typeHierarchyDepth &&
                  (reinterpret_cast<uintptr_t>(GET_CLASS(val)->typeHierarchy) <= 0x1000 ||
-                  (reinterpret_cast<uintptr_t>(GET_CLASS(val)->typeHierarchy) & 0x00FFFFFFFFFFFFFFULL) > 0xe000000000))) {
-                // We have a VERY BIG PROBLEM!
-                // This will cause a (hard to diagnose) crash!
-                // So, we will dump as much info as we can.
-                custom_types::logger.critical("WARNING! THIS WILL CRASH, DUMPING SEMANTIC INFORMATION...");
+                  (reinterpret_cast<uintptr_t>(GET_CLASS(val)->typeHierarchy) & 0x00FFFFFFFFFFFFFFULL) > 0xe000000000))
+            ) {
+                suspiciousReason = "referenced class has a suspicious type-hierarchy pointer";
+            }
+
+            if (suspiciousReason) {
+                custom_types::logger.critical("CustomTypes detected suspicious metadata during IL2CPP liveness traversal");
+                custom_types::logger.critical("reason: {}", suspiciousReason);
                 custom_types::logger.critical(
-                    "LivenessState::TraverseGCDescriptor({}, {}) class: {}, gc_desc: "
-                    "{}, {}::{} {}",
-                    fmt::ptr(obj),
+                    "state: {}, captured filter: {} ({}::{}), object: {}, object class: {}, object type: {}::{}, gc_desc: {}",
                     fmt::ptr(state),
+                    fmt::ptr(filterClass),
+                    filterClass ? namespaze(filterClass) : "<none>",
+                    filterClass ? namek(filterClass) : "<none>",
+                    fmt::ptr(obj),
                     fmt::ptr(GET_CLASS(obj)),
-                    fmt::ptr(GET_CLASS(obj)->gc_desc),
                     namespaze(GET_CLASS(obj)),
                     namek(GET_CLASS(obj)),
-                    generics(GET_CLASS(obj)).c_str()
+                    fmt::ptr(GET_CLASS(obj)->gc_desc)
                 );
-                // malloc_info()
-                // TODO: Yeah
-                std::filesystem::path path = "/sdcard/ModData/com.beatgames.beatsaber/Mods/CustomTypes/CustomTypesMallocInfoOnExit.xml";
-                if (!std::filesystem::exists(path.parent_path()))
-                    std::filesystem::create_directories(path.parent_path());
-                auto f = fopen(path.c_str(), "w");
-                if (!malloc_info(0, f)) {
-                    custom_types::logger.critical("Failed to write to: {}!", path.c_str());
-                } else {
-                    custom_types::logger.debug("Wrote malloc info to: {}", path.c_str());
-                }
-                fclose(f);
                 custom_types::logger.critical(
-                    "LivenessState::TraverseGCDescriptor({}, {}), with val: {} (klass: "
-                    "{}), idx: {}",
-                    fmt::ptr(obj),
-                    fmt::ptr(state),
-                    fmt::ptr(val),
-                    fmt::ptr(val->klass),
-                    i
-                );
-                if (GET_CLASS(val)) {
-                    custom_types::logger.critical("has_references: {}", (bool) GET_CLASS(val)->has_references);
-                }
-                // custom_types::logger.critical("Logging filterClass: {}",
-                // fmt::ptr(filterClass)); custom_types::logAll(filterClass);
-                // custom_types::logger.critical("Logging all registered custom
-                // types..."); for (auto k : custom_types::Register::classes) {
-                // 	custom_types::logger.critical("KLASS PTR: {}", fmt::ptr(k));
-                // 	custom_types::logAll(k);
-                // }
-
-                custom_types::logger.debug(
-                    "gc descriptor test field: obj: {}, "
-                    "field: {}, value: {}, class: {}",
-                    fmt::ptr(obj),
+                    "field index: {}, field offset: {}, field address: {}, raw value: {}, raw value class: {}, registered CustomTypes class: {}",
+                    i,
+                    i * sizeof(void*),
                     fmt::ptr(valptr),
                     fmt::ptr(val),
-                    fmt::ptr(val ? val->klass : nullptr)
+                    fmt::ptr(rawValueClass),
+                    isRegisteredCustomClass(valueClass)
                 );
-                custom_types::logger.critical("obj_traverse_count: {}", obj_traverse_count);
-                custom_types::logger.critical("generic_obj_traverse_count: {}", generic_obj_traverse_count);
+                custom_types::logger.critical(
+                    "object traversals: {}, generic object traversals: {}",
+                    obj_traverse_count.load(std::memory_order_relaxed),
+                    generic_obj_traverse_count.load(std::memory_order_relaxed)
+                );
 
-                custom_types::logger.critical(
-                    "Talk to Sc2ad to try and understand what the hell is going on "
-                    "here and why."
-                );
-                custom_types::logger.critical(
-                    "Also, please be very kind and send him this whole log file! It "
-                    "would be much appreciated."
-                );
-                custom_types::logger.critical(
-                    "With that said, the log in this file may have been truncated, so "
-                    "consider grabbing the file log for custom types instead."
-                );
-                custom_types::logger.critical(
-                    "custom types will now try to log as much information it can about "
-                    "the offending instance's class before crashing..."
-                );
-                custom_types::logger.debug("Capturing memory snapshot...");
-                // auto snapshot = i2c::functions::capture_memory_snapshot();
-                // auto snapshot_path = string_format(LOG_PATH,
-                // "com.beatgames.beatsaber") + "MemoryDump.bin"; std::ofstream
-                // memory_snapshot(snapshot_path, std::ios::binary);
-                // memory_snapshot.write(reinterpret_cast<char*>(snapshot),
-                // sizeof(*snapshot)); memory_snapshot.close();
-                // i2c::functions::free_captured_memory_snapshot(snapshot);
-                // custom_types::logger.debug("Logging memory dump to {}",
-                // snapshot_path.c_str());
-                custom_types::logger.critical("KLASS PTR: {}", fmt::ptr(obj->klass));
-                if (GET_CLASS(obj)) {
-                    custom_types::logAll(GET_CLASS(obj));
-                }
                 custom_types::logger.critical("KLASS PTR: {}", fmt::ptr(val->klass));
-                custom_types::logger.critical("Attempting HasParentUnsafe({}, {})...", fmt::ptr(GET_CLASS(val)), fmt::ptr(filterClass));
-                auto ret = HasParentUnsafe(GET_CLASS(val), filterClass);
-                custom_types::logger.critical("HasParentUnsafe return: {}", ret);
-                if (GET_CLASS(val)) {
-                    custom_types::logAll(GET_CLASS(val));
-                }
-                // Things I have learned, just dumping here:
-                // static fields and classes that have a nonzero quantity of static
-                // fields need to be added to: Class::GetStaticFieldData() as for
-                // Liveness::FromRoot, it MIGHT NOT be the base, because the recursion
-                // layer is not bt-able due to b's instead of bl's So, what COULD happen
-                // is that the root liveness calc DOES NOT have a gc descriptor, and it
-                // is only a type later on that does. Perhaps we should hook the
-                // TraverseGenericObject function instead and see what we can learn as
-                // we walk the root? Seems to be the first field of a dictionary that
-                // has this issue Also the 0x60 field of a Regex::Match type, which is
-                // an array: [FieldOffset(Offset = "0x60")] [Token(Token =
-                // "0x040002A5")] internal int[] _matchcount;
 
-                // Have we damaged an array creation method on accident?
+                if (filterClass) {
+                    custom_types::logger.critical("Attempting HasParentUnsafe({}, {})...", fmt::ptr(GET_CLASS(val)), fmt::ptr(filterClass));
+                    auto ret = HasParentUnsafe(GET_CLASS(val), filterClass);
+                    custom_types::logger.critical("HasParentUnsafe return: {}", ret);
+                }
+
+                custom_types::logger.critical(
+                    "No further class/type-hierarchy dereference will be attempted by CustomTypes; forwarding to Unity's original traversal"
+                );
+                // Give Paper a bounded opportunity to persist the report without
+                // holding Unity's asset-GC thread indefinitely.
+                Paper::ffi::paper2_wait_flush_timeout(250);
+                return LivenessState_TraverseGCDescriptor(obj, state);
             }
         }
     }
@@ -644,17 +593,6 @@ namespace custom_types {
             // }
 
 #ifdef CT_USE_GCDESCRIPTOR_DEBUG
-            // Install memory callbacks
-            Il2CppMemoryCallbacks callbacks{
-                .malloc_func = ct_malloc,
-                .aligned_malloc_func = ct_aligned_malloc,
-                .free_func = ct_free,
-                .aligned_free_func = ct_aligned_free,
-                .calloc_func = ct_calloc,
-                .realloc_func = ct_realloc,
-                .aligned_realloc_func = ct_aligned_realloc,
-            };
-            // i2c::functions::set_memory_callbacks(&callbacks);
 #define BREAK(var, ...)                  \
     do {                                 \
         if (!var) {                      \
@@ -664,6 +602,15 @@ namespace custom_types {
     } while (0)
 
             {
+                // IL2CPP's exported liveness APIs are adjacent 16-byte branch
+                // veneers. Inline-hooking those veneers directly would overwrite
+                // neighboring exports. Resolve every veneer before installing any
+                // hook, then hook the non-adjacent implementation functions.
+                auto allocateLiveness = readsafeb(reinterpret_cast<uint32_t*>(il2cpp_functions::il2cpp_unity_liveness_allocate_struct));
+                BREAK(allocateLiveness, "Failed to resolve il2cpp_unity_liveness_allocate_struct!");
+                auto freeLiveness = readsafeb(reinterpret_cast<uint32_t*>(il2cpp_functions::il2cpp_unity_liveness_free_struct));
+                BREAK(freeLiveness, "Failed to resolve il2cpp_unity_liveness_free_struct!");
+
                 // We need to xref trace to get to LivenessState stuff
                 // il2cpp_unity_liveness_calculation_from_root
                 // only a b --> Liveness::FromRoot
@@ -684,7 +631,11 @@ namespace custom_types {
                 opt = cs::findNthBSafe<2>(*opt);
                 BREAK(opt, "Failed to find 2nd b in LivenessState::TraverseGenericObject!");
                 BREAK(traverseInternal, "Failed to find 3rd b in LivenessState::TraverseGenericObject!");
-                // We found all of the chain, lets install our debug hook!
+                // Capture the filter at the stable public API boundary and install
+                // the internal traversal diagnostics only after every address has
+                // been resolved successfully.
+                INSTALL_HOOK(logger, UnityLivenessAllocateStruct, *allocateLiveness);
+                INSTALL_HOOK(logger, UnityLivenessFreeStruct, *freeLiveness);
                 INSTALL_HOOK(logger, LivenessState_TraverseGenericObject, traverseGeneric);
                 INSTALL_HOOK(logger, LivenessState_TraverseGCDescriptor, *opt);
                 INSTALL_HOOK(logger, LivenessState_TraverseObjectInternal, *traverseInternal);
