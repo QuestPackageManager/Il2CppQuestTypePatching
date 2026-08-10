@@ -342,7 +342,7 @@ MAKE_HOOK(LivenessState_TraverseGCDescriptor, (nullptr), void, Il2CppObject* obj
             // val is: pointer to BeatmapDifficulty[] (at least, it SHOULD be)
             // specifically, val is a pointer to: 39D0 before obj
             // Offset of filter class
-            auto filterClass = *reinterpret_cast<Il2CppClass**>(reinterpret_cast<uintptr_t>(state) + 0x10);
+            auto filterClass = *reinterpret_cast<Il2CppClass**>(reinterpret_cast<uintptr_t>(state) + 0x08);
             if (!val->klass || (GET_CLASS(val)->has_references == 0 && GET_CLASS(val)->klass != GET_CLASS(val) && GET_CLASS(val)->name == nullptr) ||
                 // If our filter class is not null, and
                 // our filter class' type hierarchy depth is <= ours and
@@ -439,9 +439,12 @@ MAKE_HOOK(LivenessState_TraverseGCDescriptor, (nullptr), void, Il2CppObject* obj
                     custom_types::logAll(GET_CLASS(obj));
                 }
                 custom_types::logger.critical("KLASS PTR: {}", fmt::ptr(val->klass));
-                custom_types::logger.critical("Attempting HasParentUnsafe({}, {})...", fmt::ptr(GET_CLASS(val)), fmt::ptr(filterClass));
-                auto ret = HasParentUnsafe(GET_CLASS(val), filterClass);
-                custom_types::logger.critical("HasParentUnsafe return: {}", ret);
+                if (filterClass) {
+                    custom_types::logger.critical("Attempting HasParentUnsafe({}, {})...", fmt::ptr(GET_CLASS(val)), fmt::ptr(filterClass));
+                    auto ret = HasParentUnsafe(GET_CLASS(val), filterClass);
+                    custom_types::logger.critical("HasParentUnsafe return: {}", ret);
+                }
+
                 if (GET_CLASS(val)) {
                     custom_types::logAll(GET_CLASS(val));
                 }
