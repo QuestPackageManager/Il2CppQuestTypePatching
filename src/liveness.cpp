@@ -179,6 +179,14 @@ namespace {
     // 	custom_types::logger.debug("Complete Liveness::FromStatics");
     // }
 
+    // The value we are reporting on is, by definition, one whose class pointer we
+    // already suspect. Dereferencing it is what turns this diagnostic into a
+    // SIGSEGV instead of a log message. A real Il2CppClass points its klass field
+    // back at itself and has a name.
+    static inline bool LooksLikeValidClass(Il2CppClass const* klass) {
+        return klass != nullptr && klass->klass == klass && klass->name != nullptr;
+    }
+
     static inline bool HasParentUnsafe(Il2CppClass const* klass, Il2CppClass const* parent) {
         return klass->typeHierarchyDepth >= parent->typeHierarchyDepth && klass->typeHierarchy[parent->typeHierarchyDepth - 1] == parent;
     }
@@ -311,14 +319,19 @@ namespace {
                         custom_types::logAll(GET_CLASS(obj));
                     }
                     custom_types::logger.critical("KLASS PTR: {}", fmt::ptr(val->klass));
-                    if (filterClass) {
-                        custom_types::logger.critical("Attempting HasParentUnsafe({}, {})...", fmt::ptr(GET_CLASS(val)), fmt::ptr(filterClass));
-                        auto ret = HasParentUnsafe(GET_CLASS(val), filterClass);
-                        custom_types::logger.critical("HasParentUnsafe return: {}", ret);
-                    }
-                    if (GET_CLASS(val)) {
+                    if (LooksLikeValidClass(GET_CLASS(val))) {
+                        if (LooksLikeValidClass(filterClass)) {
+                            custom_types::logger.critical("Attempting HasParentUnsafe({}, {})...", fmt::ptr(GET_CLASS(val)), fmt::ptr(filterClass));
+                            auto ret = HasParentUnsafe(GET_CLASS(val), filterClass);
+                            custom_types::logger.critical("HasParentUnsafe return: {}", ret);
+                        } else {
+                            custom_types::logger.critical("Filter class {} is not a valid Il2CppClass, skipping HasParentUnsafe", fmt::ptr(filterClass));
+                        }
                         custom_types::logAll(GET_CLASS(val));
+                    } else {
+                        custom_types::logger.critical("Class {} of the offending instance is not a valid Il2CppClass, skipping the parent check and class dump", fmt::ptr(GET_CLASS(val)));
                     }
+                    custom_types::logger.critical("Continuing without crashing");
                     // Things I have learned, just dumping here:
                     // static fields and classes that have a nonzero quantity of static
                     // fields need to be added to: Class::GetStaticFieldData() as for
