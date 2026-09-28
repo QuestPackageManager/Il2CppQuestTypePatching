@@ -1,3 +1,4 @@
+#include "beatsaber-hook/shared/find.hpp"
 #include "extra-typedefs.hpp"
 #include "logging.hpp"
 #include "register.hpp"
@@ -610,8 +611,10 @@ namespace custom_types {
         for (size_t i = 0; i < offsets.size(); i++) {
             k->interfaceOffsets[i] = offsets[i];
         }
-        // If any method exists that has a Finalize name, should use it
-        k->has_finalize = false;
+        // Finalization follows the System.Object.Finalize slot, regardless of the
+        // override's name. The completed vtable also includes inherited finalizers.
+        auto* objectFinalize = THROW_UNLESS(logger, i2c::find_method({"System", "Object"}, {"Finalize", 0}));
+        k->has_finalize = k->vtable[objectFinalize->slot].method != objectFinalize;
         // TODO: Allow cctor to exist someday
         k->has_cctor = false;
 
@@ -623,9 +626,6 @@ namespace custom_types {
             m->get()->klass = k;
             // TODO: Populate other fields as necessary
             k->methods[i] = m->get();
-            if (!k->has_finalize && checkVirtualsForMatch(methods[i], "System", "Object", "Finalize", 0)) {
-                k->has_finalize = true;
-            }
         }
     }
 
