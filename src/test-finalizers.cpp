@@ -53,7 +53,7 @@ namespace {
     }
 }
 
-// Called after AutoRegister by the LOCAL_TEST entry point. Referencing the
+// Invoke explicitly after AutoRegister in a LOCAL_TEST build. Referencing the
 // delegate registration objects also ensures both template types are registered.
 void testFinalizers() {
     CheckFinalizer(i2c::class_of<FinalizerTests::Plain*>(), false);

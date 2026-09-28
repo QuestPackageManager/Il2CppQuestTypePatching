@@ -168,8 +168,6 @@ DEFINE_TYPE(SmallTest, TestIt3);
 
 static custom_types::ClassWrapper* klassWrapper;
 
-void testFinalizers();
-
 CUSTOM_TYPES_FUNC void setup(CModInfo* info) {
     info->id = MOD_ID;
     info->version = VERSION;
@@ -221,7 +219,6 @@ CUSTOM_TYPES_FUNC void load() {
     static constexpr auto& logger = custom_types::logger;
     logger.debug("Registering types! (current size: {})", custom_types::Register::classes.size());
     custom_types::Register::AutoRegister();
-    testFinalizers();
     logger.debug("Registered: {} types!", custom_types::Register::classes.size());
     INSTALL_HOOK(logger, MainMenuViewController_DidActivate);
     logger.debug("Custom types size: {}", custom_types::Register::classes.size());
