@@ -613,7 +613,7 @@ namespace custom_types {
         }
         // Finalization follows the System.Object.Finalize slot, regardless of the
         // override's name. The completed vtable also includes inherited finalizers.
-        auto* objectFinalize = THROW_UNLESS(logger, i2c::find_method({"System", "Object"}, {"Finalize", 0}));
+        static auto* const objectFinalize = THROW_UNLESS(logger, i2c::find_method({"System", "Object"}, {"Finalize", 0}));
         k->has_finalize = k->vtable[objectFinalize->slot].method != objectFinalize;
         // TODO: Allow cctor to exist someday
         k->has_cctor = false;
