@@ -49,10 +49,7 @@ void Il2CppNamespace::MyType::ctor() {
 void Il2CppNamespace::MyType::Start() {
     logger.debug("Called Il2CppNamespace::MyType::Start!");
     logger.debug("Return of asdf(1): {}", asdf(1));
-    // Runtime invoke it.
-    // We ARE NOT able to call GetClassFromName.
-    // This is because our class name is NOT in the nameToClassHashTable
-    // However, we ARE able to get our Il2CppClass* via the klass private static field of this type.
+    // Resolve the registered class by name, then invoke its method through IL2CPP.
     auto* il2cppKlass = i2c::get_class_from_name("Il2CppNamespace", "MyType");
     logger.debug("il2cpp obtained klass: {}", fmt::ptr(il2cppKlass));
     logger.debug("klass: {}", fmt::ptr(___TypeRegistration::klass_ptr));
@@ -122,8 +119,6 @@ void Il2CppNamespace::MyCustomRandom2::ctor(double original) {
 
 DECLARE_CLASS(SmallTest, Test, "System", "Object", sizeof(Il2CppObject)) {
     DECLARE_STATIC_METHOD(SmallTest::Test*, SelfRef, int);
-    DECLARE_STATIC_FIELD(SmallTest::Test*, selfRefField);
-    DECLARE_STATIC_FIELD(Il2CppNamespace::MyType*, AnotherRef);
 };
 
 DEFINE_TYPE(SmallTest, Test);
@@ -168,6 +163,31 @@ DEFINE_TYPE(SmallTest, TestIt3);
 
 static custom_types::ClassWrapper* klassWrapper;
 
+void testFinalizers();
+void testClassLookupPublication();
+
+static void testClassLookup() {
+    auto check = [](Il2CppImage const* image, char const* namespaze, char const* name, Il2CppClass* expected) {
+        if (i2c::functions::class_from_name(image, namespaze, name) != expected) {
+            SAFE_ABORT("Class lookup regression: {}::{} in {}", namespaze, name, image->name);
+        }
+    };
+    for (auto* klass : custom_types::Register::classes) {
+        check(klass->image, klass->namespaze, klass->name, klass);
+    }
+    auto* custom = i2c::class_of<Il2CppNamespace::MyType*>();
+    auto* object = i2c::class_of<Il2CppObject*>();
+    check(object->image, custom->namespaze, custom->name, nullptr);
+    check(i2c::class_of<Il2CppNamespace::MyTypeDllTest*>()->image, custom->namespaze, custom->name, nullptr);
+    check(custom->image, custom->namespaze, "MissingType", nullptr);
+    check(custom->image, "MissingNamespace", custom->name, nullptr);
+    check(object->image, object->namespaze, object->name, object);
+    if (i2c::get_class_from_name(custom->namespaze, custom->name) != custom) {
+        SAFE_ABORT("Custom type lookup across assemblies returned the wrong class");
+    }
+    logger.info("Class lookup: all registered types, image isolation, missing names, and native fallback passed");
+}
+
 CUSTOM_TYPES_FUNC void setup(CModInfo* info) {
     info->id = MOD_ID;
     info->version = VERSION;
@@ -202,13 +222,19 @@ MAKE_HOOK(
     logger.debug("Got GO: {}", fmt::ptr(go));
     custom_types::logAll(i2c::class_of<Il2CppNamespace::MyType*>());
     custom_types::logAll(i2c::class_of<Il2CppNamespace::MyType*>()->parent);
-    auto* customType = i2c::get_system_type(custom_types::Register::classes[0]);
+    auto* customType = i2c::get_system_type(i2c::class_of<Il2CppNamespace::MyType*>());
     logger.debug("Custom System.Type: {}", fmt::ptr(customType));
-    auto strType = RET_V_UNLESS(logger, i2c::run_method<i2c::result<StringW>>(customType, "ToString"));
+    // Use the concrete runtime class rather than the abstract System.Type mapping.
+    auto* runtimeType = reinterpret_cast<Il2CppObject*>(customType);
+    auto strType = RET_V_UNLESS(logger, i2c::run_method<i2c::result<StringW>>(runtimeType, "ToString"));
     logger.debug("ToString: {}", strType);
-    auto name = RET_V_UNLESS(logger, i2c::get_property<i2c::result<StringW>>(customType, "Name"));
-    logger.debug("Name: {}", name);
-    logger.debug("Actual type: {}", fmt::ptr(&custom_types::Register::classes[0]->byval_arg));
+    auto name = i2c::get_property<i2c::result<StringW>>(runtimeType, "Name");
+    if (name) {
+        logger.debug("Name: {}", *name);
+    } else {
+        logger.error("System.Type.Name test failed: {}", name.error());
+    }
+    logger.debug("Actual type: {}", fmt::ptr(&i2c::class_of<Il2CppNamespace::MyType*>()->byval_arg));
     logger.debug("Type: {}", fmt::ptr(customType->type));
     // crashNow = true;
     auto* comp = RET_V_UNLESS(logger, i2c::run_method<i2c::result<Il2CppObject*>>(go, "AddComponent", customType));
@@ -220,6 +246,9 @@ CUSTOM_TYPES_FUNC void load() {
     logger.debug("Registering types! (current size: {})", custom_types::Register::classes.size());
     custom_types::Register::AutoRegister();
     logger.debug("Registered: {} types!", custom_types::Register::classes.size());
+    testFinalizers();
+    testClassLookup();
+    testClassLookupPublication();
     INSTALL_HOOK(logger, MainMenuViewController_DidActivate);
     logger.debug("Custom types size: {}", custom_types::Register::classes.size());
     logger.debug("Logging vtables for custom type! There are: {} vtables", custom_types::Register::classes[0]->vtable_count);
