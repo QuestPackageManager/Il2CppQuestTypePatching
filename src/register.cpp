@@ -8,6 +8,7 @@
 #include "beatsaber-hook/shared/hooking.hpp"
 
 #include <filesystem>
+#include <limits>
 
 #ifdef CT_USE_GCDESCRIPTOR_DEBUG
 #include "liveness.hpp"
@@ -155,26 +156,22 @@ MAKE_HOOK(GetScriptingClass, (nullptr), Il2CppClass*, void* thisptr, char* assem
     return ret;
 }
 
-} // end anonymous namespace
+MAKE_HOOK(Class_FromName, (nullptr), Il2CppClass*, Il2CppImage const* image, char const* namespaze, char const* name) {
+    // Unity can inline the metadata-handle conversion here, bypassing our handle hook.
+    // Resolve custom classes before their synthetic handles reach that conversion.
+    if (image && image->dynamic) {
+        if (auto klass = custom_types::Register::FindClass(image, namespaze, name)) {
+            return *klass;
+        }
+    }
+    return Class_FromName(image, namespaze, name);
+}
 
-// NOTE THAT THIS HOOK DOES NOT PERMIT TYPES OF IDENTICAL NAMESPACE AND NAME BUT
-// IN DIFFERENT IMAGES! This could be worked around if we also have image be a
-// part of the key, but as it stands, that is not necessary.
-// MAKE_HOOK(Class_FromName, nullptr, Il2CppClass*, Il2CppImage* image, const
-// char* namespaze, const char* name) {
-//     pair = std::make_pair(std::string(namespaze), std::string(name)); auto
-//     itr = custom_types::Register::classMapping.find(pair); if (itr !=
-//     custom_types::Register::classMapping.end()) {
-//         #ifndef NO_VERBOSE_LOGS
-//         custom_types::logger.debug("Returning custom class from: {}::{} lookup: {}",
-//         namespaze, name, fmt::ptr(itr->second)); #endif return itr->second;
-//     }
-//     return Class_FromName(image, namespaze, name);
-// }
+} // end anonymous namespace
 
 namespace custom_types {
     std::unordered_map<std::string, Il2CppAssembly*> Register::assembs;
-    std::unordered_map<std::string, Il2CppImage*> Register::images;
+    Register::ImageMap Register::images;
     std::unordered_map<std::pair<std::string, std::string>, Il2CppClass*> Register::classMapping;
     std::shared_mutex Register::assemblyMtx;
     std::shared_mutex Register::imageMtx;
@@ -185,6 +182,39 @@ namespace custom_types {
     std::vector<Il2CppClass*> Register::classes;
     std::vector<TypeRegistration*> Register::toRegister;
     std::vector<TypeRegistration*> Register::registeredTypes;
+
+    std::optional<Il2CppClass*> Register::FindClass(Il2CppImage const* image, char const* namespaze, char const* name) {
+        // Native images take the original path without locking or accessing our registry.
+        if (!image || !image->dynamic) {
+            return std::nullopt;
+        }
+        std::shared_lock lock(imageMtx);
+        auto owned = images.find(image->name);
+        if (owned == images.end() || owned->second != image) {
+            return std::nullopt;
+        }
+        auto const& table = *image->nameToClassHashTable;
+        auto found = table.find(std::make_pair(namespaze, name));
+        if (found == table.end()) {
+            return nullptr;
+        }
+        // Custom handles encode a negative 32-bit type index with zero upper bits.
+        auto handle = reinterpret_cast<uintptr_t>(found->second);
+        constexpr auto maxIndex = std::numeric_limits<uint32_t>::max();
+        if (handle > maxIndex || handle <= std::numeric_limits<int32_t>::max()) {
+            return nullptr;
+        }
+        size_t index = maxIndex - handle;
+        if (index >= classes.size()) {
+            return nullptr;
+        }
+        auto* klass = classes[index];
+        if (!klass || klass->image != image || klass->byval_arg.data.typeHandle != found->second ||
+            strcmp(klass->namespaze, namespaze) != 0 || strcmp(klass->name, name) != 0) {
+            return nullptr;
+        }
+        return klass;
+    }
 
     Il2CppAssembly* Register::createAssembly(std::string_view name, Il2CppImage* img) {
         // Name is NOT copied, so should be a constant string
@@ -228,7 +258,6 @@ namespace custom_types {
         auto img = new Il2CppImage();
         std::unique_lock lock(imageMtx);
         auto res = images.insert({strName, img});
-        lock.unlock();
         img->name = res.first->first.c_str();
         auto strToCopy = strName.substr(0, strName.find_last_of('.'));
         auto* allocNameNoExt = new char[strToCopy.size() + 1];
@@ -236,7 +265,6 @@ namespace custom_types {
         allocNameNoExt[strToCopy.size()] = '\0';
         img->nameNoExt = allocNameNoExt;
         img->dynamic = true;
-        img->assembly = createAssembly(allocNameNoExt, img);
         img->nameToClassHashTable = new Il2CppNameToTypeHandleHashTable();
         auto metadata = new Il2CppImageGlobalMetadata();
         metadata->image = img;
@@ -255,6 +283,9 @@ namespace custom_types {
         metadata->customAttributeStart = 0;
         img->customAttributeCount = 0;
         metadata->entryPointIndex = 0;
+        // Publish to Unity only after the lookup table and metadata are ready.
+        lock.unlock();
+        img->assembly = createAssembly(allocNameNoExt, img);
         // TODO: Populate this in a more reasonable way
         // auto* codegen = new Il2CppCodeGenModule{Il2CppCodeGenModule{
         //     .moduleName = name.data(),
@@ -302,14 +333,12 @@ namespace custom_types {
             } else {
                 logger.warn("Failed to find 1st bl in il2cpp_type_get_class_or_element_class!");
             }
-            // {
-            //     // We need to do a tiny bit of xref tracing to find the bottom level
-            //     Class::FromName call
-            //     // Trace is: il2cpp_class_from_name --> b --> b --> result
-            //     INSTALL_HOOK(logger, Class_FromName,
-            //     (void*)cs::findNthB<1>(reinterpret_cast<const
-            //     uint32_t*>(i2c::functions::class_from_name)));
-            // }
+            // In this Unity build, the API wrapper branches directly to Image::ClassFromName.
+            auto class_from_name = cs::find_nth_b<1, false, -1, 4>(reinterpret_cast<uint32_t const*>(i2c::functions::class_from_name));
+            if (!class_from_name) {
+                SAFE_ABORT("Failed to find Class::FromName from il2cpp_class_from_name");
+            }
+            INSTALL_HOOK(logger, Class_FromName, reinterpret_cast<void*>(*class_from_name));
 
 #ifdef CT_USE_GCDESCRIPTOR_DEBUG
             liveness::EnsureHooks();
