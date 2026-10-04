@@ -184,7 +184,6 @@ namespace custom_types {
         if (!image || !image->dynamic) {
             return std::nullopt;
         }
-        std::shared_lock lock(imageMtx);
         auto owned = images.find(image->name);
         if (owned == images.end() || owned->second != image) {
             return std::nullopt;
