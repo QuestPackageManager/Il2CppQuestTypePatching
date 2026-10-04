@@ -26,13 +26,8 @@ namespace custom_types {
         friend TypeRegistration;
 
        private:
-        struct ImageNameHash {
-            using is_transparent = void;
-            size_t operator()(std::string_view name) const noexcept { return std::hash<std::string_view>{}(name); }
-        };
-        using ImageMap = std::unordered_map<std::string, Il2CppImage*, ImageNameHash, std::equal_to<>>;
         CUSTOM_TYPES_EXPORT static std::unordered_map<std::string, Il2CppAssembly*> assembs;
-        CUSTOM_TYPES_EXPORT static ImageMap images;
+        CUSTOM_TYPES_EXPORT static std::unordered_map<std::string, Il2CppImage*> images;
         CUSTOM_TYPES_EXPORT static std::shared_mutex assemblyMtx;
         CUSTOM_TYPES_EXPORT static std::shared_mutex imageMtx;
         CUSTOM_TYPES_EXPORT static std::mutex registrationMtx;
@@ -174,7 +169,6 @@ namespace custom_types {
         /// types memory overhead to be significant.
         CUSTOM_TYPES_EXPORT static void UnregisterAll() {
             std::lock_guard lck(registrationMtx);
-            std::unique_lock lookupLock(imageMtx);
             Register::typeIdx = kTypeDefinitionIndexInvalid;
             for (auto itr : registeredTypes) {
                 itr->clear();

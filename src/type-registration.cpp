@@ -208,6 +208,8 @@ namespace custom_types {
         // Create image from namespace
         auto img = Register::createImage(dllName());
         k->image = img;
+        // Add ourselves to our image hash table (for class_from_name)
+        img->nameToClassHashTable->insert(std::make_pair(std::make_pair(namespaze(), name()), type->data.typeHandle));
         // Set name
         k->name = name();
         k->namespaze = namespaze();
@@ -301,12 +303,7 @@ namespace custom_types {
         // Cleanup and finalization
         delete type;
         klass() = k;
-        {
-            // Publish the class and its lookup entry together; readers must never see a partial entry.
-            std::unique_lock lookupLock(Register::imageMtx);
-            Register::classes.push_back(k);
-            img->nameToClassHashTable->insert(std::make_pair(std::make_pair(namespaze(), name()), k->byval_arg.data.typeHandle));
-        }
+        Register::classes.push_back(k);
         // At the end of our creation, remove ourselves from the load
         loadingTypes.erase(this);
         lock.unlock();

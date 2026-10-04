@@ -158,11 +158,8 @@ MAKE_HOOK(GetScriptingClass, (nullptr), Il2CppClass*, void* thisptr, char* assem
 
 MAKE_HOOK(Class_FromName, (nullptr), Il2CppClass*, Il2CppImage const* image, char const* namespaze, char const* name) {
     // Unity can inline the metadata-handle conversion here, bypassing our handle hook.
-    // Resolve custom classes before their synthetic handles reach that conversion.
-    if (image && image->dynamic) {
-        if (auto klass = custom_types::Register::FindClass(image, namespaze, name)) {
-            return *klass;
-        }
+    if (auto klass = custom_types::Register::FindClass(image, namespaze, name)) {
+        return *klass;
     }
     return Class_FromName(image, namespaze, name);
 }
@@ -171,7 +168,7 @@ MAKE_HOOK(Class_FromName, (nullptr), Il2CppClass*, Il2CppImage const* image, cha
 
 namespace custom_types {
     std::unordered_map<std::string, Il2CppAssembly*> Register::assembs;
-    Register::ImageMap Register::images;
+    std::unordered_map<std::string, Il2CppImage*> Register::images;
     std::unordered_map<std::pair<std::string, std::string>, Il2CppClass*> Register::classMapping;
     std::shared_mutex Register::assemblyMtx;
     std::shared_mutex Register::imageMtx;
@@ -184,7 +181,6 @@ namespace custom_types {
     std::vector<TypeRegistration*> Register::registeredTypes;
 
     std::optional<Il2CppClass*> Register::FindClass(Il2CppImage const* image, char const* namespaze, char const* name) {
-        // Native images take the original path without locking or accessing our registry.
         if (!image || !image->dynamic) {
             return std::nullopt;
         }
@@ -209,8 +205,7 @@ namespace custom_types {
             return nullptr;
         }
         auto* klass = classes[index];
-        if (!klass || klass->image != image || klass->byval_arg.data.typeHandle != found->second ||
-            strcmp(klass->namespaze, namespaze) != 0 || strcmp(klass->name, name) != 0) {
+        if (!klass || klass->image != image) {
             return nullptr;
         }
         return klass;
@@ -258,6 +253,7 @@ namespace custom_types {
         auto img = new Il2CppImage();
         std::unique_lock lock(imageMtx);
         auto res = images.insert({strName, img});
+        lock.unlock();
         img->name = res.first->first.c_str();
         auto strToCopy = strName.substr(0, strName.find_last_of('.'));
         auto* allocNameNoExt = new char[strToCopy.size() + 1];
@@ -265,6 +261,7 @@ namespace custom_types {
         allocNameNoExt[strToCopy.size()] = '\0';
         img->nameNoExt = allocNameNoExt;
         img->dynamic = true;
+        img->assembly = createAssembly(allocNameNoExt, img);
         img->nameToClassHashTable = new Il2CppNameToTypeHandleHashTable();
         auto metadata = new Il2CppImageGlobalMetadata();
         metadata->image = img;
@@ -283,9 +280,6 @@ namespace custom_types {
         metadata->customAttributeStart = 0;
         img->customAttributeCount = 0;
         metadata->entryPointIndex = 0;
-        // Publish to Unity only after the lookup table and metadata are ready.
-        lock.unlock();
-        img->assembly = createAssembly(allocNameNoExt, img);
         // TODO: Populate this in a more reasonable way
         // auto* codegen = new Il2CppCodeGenModule{Il2CppCodeGenModule{
         //     .moduleName = name.data(),
