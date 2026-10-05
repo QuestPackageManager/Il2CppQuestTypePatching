@@ -23,11 +23,11 @@
       "build": [
         "python ./extern/includes/mod-scripts/shared/build.py $0:?"
       ],
-      "build-test": [
-        "python ./extern/includes/mod-scripts/shared/build.py -C=-DLOCAL_TEST=\"\" $0:?"
-      ],
       "build-coro": [
         "python ./extern/includes/mod-scripts/shared/build.py -C=-DLOCAL_TEST_COROUTINE=\"\" $0:?"
+      ],
+      "build-test": [
+        "python ./extern/includes/mod-scripts/shared/build.py -C=-DLOCAL_TEST=\"\" $0:?"
       ],
       "copy": [
         "python ./extern/includes/mod-scripts/shared/cpy.py $0:?"
@@ -80,7 +80,7 @@
     },
     {
       "id": "beatsaber-hook",
-      "versionRange": "^8.0.0",
+      "versionRange": "^9.0.0",
       "additionalData": {}
     }
   ]
