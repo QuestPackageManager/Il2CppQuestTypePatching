@@ -7,7 +7,9 @@
 
 #include <list>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
+#include <string_view>
 
 template <>
 struct std::hash<std::pair<std::string, std::string>> {
@@ -54,6 +56,8 @@ namespace custom_types {
        public:
         CUSTOM_TYPES_EXPORT static std::unordered_map<std::pair<std::string, std::string>, Il2CppClass*> classMapping;
         CUSTOM_TYPES_EXPORT static std::vector<Il2CppClass*> classes;
+        // nullopt delegates to Unity; an engaged result (including nullptr) belongs to a custom image.
+        CUSTOM_TYPES_EXPORT static std::optional<Il2CppClass*> FindClass(Il2CppImage const* image, char const* namespaze, char const* name);
         CUSTOM_TYPES_EXPORT static std::vector<TypeRegistration*> const& getTypes() { return registeredTypes; }
         /// @brief Automatically registers all pending types.
         /// To add a type to be registered, see: AddType

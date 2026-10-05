@@ -49,10 +49,6 @@ void Il2CppNamespace::MyType::ctor() {
 void Il2CppNamespace::MyType::Start() {
     logger.debug("Called Il2CppNamespace::MyType::Start!");
     logger.debug("Return of asdf(1): {}", asdf(1));
-    // Runtime invoke it.
-    // We ARE NOT able to call GetClassFromName.
-    // This is because our class name is NOT in the nameToClassHashTable
-    // However, we ARE able to get our Il2CppClass* via the klass private static field of this type.
     auto* il2cppKlass = i2c::get_class_from_name("Il2CppNamespace", "MyType");
     logger.debug("il2cpp obtained klass: {}", fmt::ptr(il2cppKlass));
     logger.debug("klass: {}", fmt::ptr(___TypeRegistration::klass_ptr));
@@ -122,8 +118,6 @@ void Il2CppNamespace::MyCustomRandom2::ctor(double original) {
 
 DECLARE_CLASS(SmallTest, Test, "System", "Object", sizeof(Il2CppObject)) {
     DECLARE_STATIC_METHOD(SmallTest::Test*, SelfRef, int);
-    DECLARE_STATIC_FIELD(SmallTest::Test*, selfRefField);
-    DECLARE_STATIC_FIELD(Il2CppNamespace::MyType*, AnotherRef);
 };
 
 DEFINE_TYPE(SmallTest, Test);
@@ -167,6 +161,21 @@ DECLARE_CLASS(SmallTest, TestIt3, "System", "Object", sizeof(Il2CppObject)) {
 DEFINE_TYPE(SmallTest, TestIt3);
 
 static custom_types::ClassWrapper* klassWrapper;
+
+static void testClassLookup() {
+    auto check = [](Il2CppImage const* image, char const* namespaze, char const* name, Il2CppClass* expected) {
+        if (i2c::functions::class_from_name(image, namespaze, name) != expected) {
+            SAFE_ABORT("Class lookup regression: {}::{} in {}", namespaze, name, image->name);
+        }
+    };
+    auto* custom = i2c::class_of<Il2CppNamespace::MyType*>();
+    auto* object = i2c::class_of<Il2CppObject*>();
+    check(custom->image, custom->namespaze, custom->name, custom);
+    check(custom->image, custom->namespaze, "MissingType", nullptr);
+    check(i2c::class_of<Il2CppNamespace::MyTypeDllTest*>()->image, custom->namespaze, custom->name, nullptr);
+    check(object->image, object->namespaze, object->name, object);
+    logger.info("Class lookup tests passed");
+}
 
 CUSTOM_TYPES_FUNC void setup(CModInfo* info) {
     info->id = MOD_ID;
@@ -220,6 +229,7 @@ CUSTOM_TYPES_FUNC void load() {
     logger.debug("Registering types! (current size: {})", custom_types::Register::classes.size());
     custom_types::Register::AutoRegister();
     logger.debug("Registered: {} types!", custom_types::Register::classes.size());
+    testClassLookup();
     INSTALL_HOOK(logger, MainMenuViewController_DidActivate);
     logger.debug("Custom types size: {}", custom_types::Register::classes.size());
     logger.debug("Logging vtables for custom type! There are: {} vtables", custom_types::Register::classes[0]->vtable_count);
