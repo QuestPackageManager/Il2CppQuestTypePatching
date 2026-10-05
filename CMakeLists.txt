@@ -28,6 +28,7 @@ add_compile_definitions(MOD_ID="${MOD_ID}")
 add_compile_definitions(VERSION_LONG=1)
 add_compile_definitions(NEED_UNSAFE_CSHARP)
 add_compile_definitions(UNITY_6)
+add_compile_definitions(UNITY_6_3)
 add_compile_definitions(NO_VERBOSE_LOGS)
 
 # Add any extra definitions from the build script

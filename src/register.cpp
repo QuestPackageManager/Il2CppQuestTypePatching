@@ -156,6 +156,7 @@ MAKE_HOOK(GetScriptingClass, (nullptr), Il2CppClass*, void* thisptr, char* assem
     return ret;
 }
 
+#ifdef UNITY_6_3
 MAKE_HOOK(Class_FromName, (nullptr), Il2CppClass*, Il2CppImage const* image, char const* namespaze, char const* name) {
     // Unity can inline the metadata-handle conversion here, bypassing our handle hook.
     if (auto klass = custom_types::Register::FindClass(image, namespaze, name)) {
@@ -163,6 +164,7 @@ MAKE_HOOK(Class_FromName, (nullptr), Il2CppClass*, Il2CppImage const* image, cha
     }
     return Class_FromName(image, namespaze, name);
 }
+#endif
 
 } // end anonymous namespace
 
@@ -326,12 +328,14 @@ namespace custom_types {
             } else {
                 logger.warn("Failed to find 1st bl in il2cpp_type_get_class_or_element_class!");
             }
-            // In this Unity build, the API wrapper branches directly to Image::ClassFromName.
+#ifdef UNITY_6_3
+            // Unity 6.3 inlines handle conversion; intercept Image::ClassFromName first.
             auto class_from_name = cs::find_nth_b<1, false, -1, 4>(reinterpret_cast<uint32_t const*>(i2c::functions::class_from_name));
             if (!class_from_name) {
                 SAFE_ABORT("Failed to find Class::FromName from il2cpp_class_from_name");
             }
             INSTALL_HOOK(logger, Class_FromName, reinterpret_cast<void*>(*class_from_name));
+#endif
 
 #ifdef CT_USE_GCDESCRIPTOR_DEBUG
             liveness::EnsureHooks();
