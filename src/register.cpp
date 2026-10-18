@@ -77,7 +77,11 @@ MAKE_HOOK(Type_GetClassOrElementClass, (nullptr), Il2CppClass*, Il2CppType* type
     return i2c::functions::Class_FromIl2CppType(type);
 }
 
+#ifdef UNITY_6
+MAKE_HOOK(Class_Init, (nullptr), void, Il2CppClass* klass) {
+#else
 MAKE_HOOK(Class_Init, (nullptr), bool, Il2CppClass* klass) {
+#endif
     // If we are attempting to call Class::Init() on an Il2CppClass* that is a
     // custom Il2CppClass*, we need to ignore.
     if (!klass) {
@@ -94,7 +98,11 @@ MAKE_HOOK(Class_Init, (nullptr), bool, Il2CppClass* klass) {
 #ifndef NO_VERBOSE_LOGS
             logger.debug("custom idx: {}", idx);
 #endif
+#ifdef UNITY_6
+            return;
+#else
             return true;
+#endif
         }
     }
 
@@ -302,16 +310,26 @@ namespace custom_types {
             Paper::Logger::RegisterFileContextId(custom_types::logger.tag);
 
             logger.debug("Installing FromIl2CppType hook...");
+#ifdef UNITY_6
+            i2c::install_hook<Hook_FromIl2CppTypeMain<const Il2CppType*, bool>>(
+                logger, (void*) i2c::functions::Class_FromIl2CppTypeNative
+            );
+#else
             if constexpr (sizeof(Il2CppCodeGenModule) < 104) {
                 i2c::install_hook<Hook_FromIl2CppTypeMain<Il2CppType*>>(logger, (void*) i2c::functions::Class_FromIl2CppType);
             } else {
                 i2c::install_hook<Hook_FromIl2CppTypeMain<Il2CppType*, bool>>(logger, (void*) i2c::functions::Class_FromIl2CppType);
             }
+#endif
             INSTALL_HOOK(logger, GlobalMetadata_GetTypeInfoFromHandle, (void*) i2c::functions::GlobalMetadata_GetTypeInfoFromHandle);
             INSTALL_HOOK(
                 logger, GlobalMetadata_GetTypeInfoFromTypeDefinitionIndex, (void*) i2c::functions::GlobalMetadata_GetTypeInfoFromTypeDefinitionIndex
             );
+#ifdef UNITY_6
+            INSTALL_HOOK(logger, Class_Init, (void*) i2c::functions::Class_InitNative);
+#else
             INSTALL_HOOK(logger, Class_Init, (void*) i2c::functions::Class_Init);
+#endif
 
             bool multiple;
             uintptr_t GetScriptingClassAddr = i2c::binary::libunity_unique_pattern(

@@ -80,7 +80,7 @@
     },
     {
       "id": "beatsaber-hook",
-      "versionRange": "^9.0.0",
+      "versionRange": "^9.3.0",
       "additionalData": {}
     }
   ]
